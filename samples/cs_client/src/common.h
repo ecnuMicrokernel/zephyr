@@ -7,7 +7,7 @@
 #ifndef FAIL
 	#define FAIL                              -1
 #endif
-
+#define STACKSIZE 1000
 /**
  * @typedef server_recv_cb_t
  * @brief Network data receive callback.

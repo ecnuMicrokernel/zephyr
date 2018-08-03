@@ -10,8 +10,8 @@ struct data_item_t
 {
 	int 	flag;
 	char*	data;
-	int 	server_port;
-	int 	client_ip;
+	struct server* 	server;
+	struct client* 	client;
 };
 
 /*
@@ -20,13 +20,14 @@ struct data_item_t
  * 		 if set fail return FAIL else return SUCCESS	
  * 		 msg will be change here
  */
-int build_MSG(struct data_item_t* msg,int flag,char*data,int server_port,int client_ip){
+int build_MSG(struct data_item_t* msg,int flag,
+	char*data,struct server* server,struct client* client){
 	if(sizeof(data)>DATA_MAX_LEN)
 		return FAIL;
 
 	msg->flag=flag;
 	msg->data=data;
-	msg->server_port=server_port;
-	msg->client_ip=client_ip;
+	msg->server=server;
+	msg->client=client;
 	return SUCCESS;
 }

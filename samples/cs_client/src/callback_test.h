@@ -23,10 +23,17 @@ void send_msg_test( struct  server *server )
       printk( "enter server_threads_listen()\n" ); 
       /* send data to consumers */ 
       struct data_item_t msg; 
-      build_MSG( &msg, MSG_DATA, "hello world!", 8080, 1080 );    
-      k_msgq_put( &server->recv_msgq, &msg, K_NO_WAIT );
-      build_MSG( &msg, MSG_CONNECT, "hello world!", 8080, 1080 );    
-      k_msgq_put( &server->recv_msgq, &msg, K_NO_WAIT );
+      build_MSG( &msg, MSG_DATA, "hello world!", server, NULL );    
+      /* send data to consumers */
+      while (k_msgq_put(&server->recv_msgq, &msg, K_NO_WAIT) != 0) {
+            /* message queue is full: purge old data & try again */
+            k_msgq_purge(&server->recv_msgq);
+        }
+      build_MSG( &msg, MSG_CONNECT, "hello world!", server, NULL );    
+      while (k_msgq_put(&server->recv_msgq, &msg, K_NO_WAIT) != 0) {
+            /* message queue is full: purge old data & try again */
+            k_msgq_purge(&server->recv_msgq);
+        }
       
 }
 //必须全局变量，否则线程创建会出问题

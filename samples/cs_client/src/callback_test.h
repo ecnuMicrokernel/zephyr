@@ -10,7 +10,9 @@ static void connect_cb(	int ctx,
 static void  recv_cb(	int ctx,
 			int status,
 			void *user_data){
-	printk("enter recv_cb\n");
+   
+   struct data_item_t *msg=( struct data_item_t *)user_data;
+	printk("enter recv_cb:msg is %s\n",msg->data);
 }
 
 

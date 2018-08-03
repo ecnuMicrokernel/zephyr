@@ -4,6 +4,7 @@
 
 
 struct server{
+	
 	struct callback cb;					//callback函数集合
 	int port;							//server的ID
 	struct k_thread threads[2];			//listen线程和recv线程
@@ -22,6 +23,10 @@ void server_threads_listen(){
 		k_sleep(3000);
 	}
 }
+  
+
+
+
 
 
 /*
@@ -39,10 +44,10 @@ void server_threads_recv( struct  server *server  )
 		if(msg.flag==MSG_DATA){
 			printk( "MSG_DATA:%s\n", msg.data );
 			if (server->cb.recv_cb){
-				server->cb.recv_cb(NULL,NULL,NULL);
+				server->cb.recv_cb(server,SUCCESS, &msg);
 			}
 		}else{
-			printk( "NODEFINE:%s\n", msg.data );
+			printk( "NODEFINE:%s\n", msg.data);
 
 		}
 	}

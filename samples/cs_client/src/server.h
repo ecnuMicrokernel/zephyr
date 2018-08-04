@@ -11,7 +11,7 @@ struct server{
 	char __aligned(4) 
 	msgq_buf[2][10 * DATA_ITEM_T_SIZE]; //定义了listen和recv对应消息队列的buffer
 	struct k_msgq recv_msgq;			//定义了recv对应消息队列
-	struct k_msgq lisen_msgq;
+	struct k_msgq listen_msgq;
 };
 
 /*
@@ -21,7 +21,7 @@ void server_threads_listen(struct  server *server ){
 	while (1) {
 		printk("server's threads_listen\n");
         struct data_item_t msg; 
-		k_msgq_get( &(server->lisen_msgq), &msg, K_FOREVER ); 
+		k_msgq_get( &(server->listen_msgq), &msg, K_FOREVER ); 
 		printk( "lisen ");
 		if(msg.flag==MSG_DISCONN){
 			printk( "MSG_DISCONN:%s\n", msg.data );
@@ -35,8 +35,8 @@ void server_threads_listen(struct  server *server ){
 			struct data_item_t msg1; 
             build_MSG( &msg1, MSG_CONNECT, "connect success", server, NULL );    
       
-            while (k_msgq_put(&server->lisen_msgq, &msg1, K_NO_WAIT) != 0) {
-               k_msgq_purge(&server->lisen_msgq);
+            while (k_msgq_put(&server->listen_msgq, &msg1, K_NO_WAIT) != 0) {
+               k_msgq_purge(&server->listen_msgq);
              }
 
 			if (server->cb.connect_cb){
@@ -101,11 +101,12 @@ static int server_init(	struct  server* server ,
 		return FAIL;
 	}
 	printk("VALID PORT\n" );
+	first_server=server;
 	server->port=port;
 	set_cb(&server->cb,connect_cb,recv_cb,send_cb,close_cb);
 
 	k_msgq_init(&(server->recv_msgq), server->msgq_buf[0], DATA_ITEM_T_SIZE, 10); 
-	k_msgq_init(&(server->lisen_msgq), server->msgq_buf[1], DATA_ITEM_T_SIZE, 10); 
+	k_msgq_init(&(server->listen_msgq), server->msgq_buf[1], DATA_ITEM_T_SIZE, 10); 
 	//创建监听连接线程和接收消息线程
 	k_thread_create(&(server->threads[0]), &(server->thread_stacks[0][0]), STACKSIZE,
 			server_threads_listen, server, 0, 0,

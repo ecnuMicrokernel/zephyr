@@ -19,19 +19,7 @@ struct server test_server;
 struct client test_client;
 
 
-/*client request to connect*/
-int client_connect(int port)
-{
-      if(test_server.port!=port){
-          printk("port error!");  
-          return FAIL; 
-        }
-        else{
-           client_api_connnect(&test_client,&test_server);
-           return SUCCESS;
-        }
-           
-}
+
 
 
 static void callback_test(){
@@ -39,7 +27,7 @@ static void callback_test(){
    	server_init(&test_server,80,connect_cb,recv_cb,NULL,NULL);
       client_init(&test_client,100,connect_cb,recv_cb,NULL,NULL);
       //send_msg_test(&test_server);
-      client_connect(80);  
+      api_client_connect(80,&test_client);  
       printk("end\n");  
       
    	/*test_server.cb.recv_cb(NULL,NULL,NULL);

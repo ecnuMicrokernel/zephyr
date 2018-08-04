@@ -48,7 +48,7 @@ static int client_init(	struct  client* client ,
 
 
        
-static int client_api_connnect(struct  client* client,struct  server* server)
+static int client_connnect(struct  client* client,struct  server* server)
 {
 	  if(client->server_port==-1)
 	  {
@@ -58,15 +58,15 @@ static int client_api_connnect(struct  client* client,struct  server* server)
 	
 	      build_MSG(&msg,MSG_CONNECT,"request connect",NULL,client);
 	      /* send msg to server */
-	      while (k_msgq_put(&(server->lisen_msgq), &msg, K_NO_WAIT)!= 0) {
+	      while (k_msgq_put(&(server->listen_msgq), &msg, K_NO_WAIT)!= 0) {
 	            /* message queue is full: purge old data & try again */
-	                k_msgq_purge(&(server->lisen_msgq));
+	                k_msgq_purge(&(server->listen_msgq));
 	            }/* data item was successfully added to message queue */
 
 	    /*wait server msg to confirm connect*/  
 		   
 		   struct data_item_t data;
-		   if(k_msgq_get(&(server->lisen_msgq), &data, K_FOREVER)==0)
+		   if(k_msgq_get(&(server->listen_msgq), &data, K_FOREVER)==0)
 		   {
 		       if(data.flag==MSG_CONNECT)
 		       {
@@ -89,4 +89,17 @@ static int client_api_connnect(struct  client* client,struct  server* server)
 
 }
 
+/*client request to connect*/
+int api_client_connect(int port,struct client* client_ptr)
+{
+      if(first_server->port!=port){
+          printk("port error!");  
+          return FAIL; 
+        }
+        else{
+           client_connnect(client_ptr,first_server);
+           return SUCCESS;
+        }
+           
+}
 

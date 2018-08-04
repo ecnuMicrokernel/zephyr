@@ -1,3 +1,5 @@
+static struct  server* first_server;
+
 #ifndef _HEADERNAME_H
 #define _HEADERNAME_H
 

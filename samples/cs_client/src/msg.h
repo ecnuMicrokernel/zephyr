@@ -1,6 +1,6 @@
 #ifndef _HEADERNAME_H_MSG
 #define _HEADERNAME_H_MSG
-#endif
+
 #define MSG_CONNECT		 	1	//FLAG 建立连接
 #define MSG_DISCONN			-1	//FLAG 断开连接
 #define MSG_DATA			2	//FLAG 数据传输
@@ -31,3 +31,5 @@ int build_MSG(struct data_item_t* msg,int flag,
 	msg->client=client;
 	return SUCCESS;
 }
+
+#endif

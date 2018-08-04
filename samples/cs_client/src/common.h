@@ -80,7 +80,7 @@ static void  defult_cb(	int ctx,
  * TODO: set cb callback
  * 
  */
- static void set_cb(	struct  callback* cb,
+ static int set_cb(	struct  callback* cb,
 		   connect_cb_t connect_cb,
 		   recv_cb_t recv_cb,
 		   send_cb_t send_cb,

@@ -10,41 +10,38 @@ static void connect_cb(	int ctx,
 static void  recv_cb(	int ctx,
 			int status,
 			void *user_data){
-   
-   struct data_item_t *msg=( struct data_item_t *)user_data;
-	printk("enter recv_cb:msg is %s\n",msg->data);
+	printk("enter recv_cb\n");
 }
 
 
-/**
- *
- * 测试接收消息
- */
-void send_msg_test( struct  server *server )
-{
-      printk( "enter server_threads_listen()\n" ); 
-      /* send data to consumers */ 
-      struct data_item_t msg; 
-      build_MSG( &msg, MSG_DATA, "hello world!", server, NULL );    
-      /* send data to consumers */
-      while (k_msgq_put(&server->recv_msgq, &msg, K_NO_WAIT) != 0) {
-            /* message queue is full: purge old data & try again */
-            k_msgq_purge(&server->recv_msgq);
-        }
-      build_MSG( &msg, MSG_CONNECT, "hello world!", server, NULL );    
-      while (k_msgq_put(&server->recv_msgq, &msg, K_NO_WAIT) != 0) {
-            /* message queue is full: purge old data & try again */
-            k_msgq_purge(&server->recv_msgq);
-        }
-      
-}
 //必须全局变量，否则线程创建会出问题
 struct server test_server;
 struct client test_client;
+
+
+/*client request to connect*/
+int client_connect(int port)
+{
+      if(test_server.port!=port){
+          printk("port error!");  
+          return FAIL; 
+        }
+        else{
+           client_api_connnect(&test_client,&test_server);
+           return SUCCESS;
+        }
+           
+}
+
+
 static void callback_test(){
 
    	server_init(&test_server,80,connect_cb,recv_cb,NULL,NULL);
-      send_msg_test(&test_server);
+      client_init(&test_client,100,connect_cb,recv_cb,NULL,NULL);
+      //send_msg_test(&test_server);
+      client_connect(80);  
+      printk("end\n");  
+      
    	/*test_server.cb.recv_cb(NULL,NULL,NULL);
    	test_server.cb.connect_cb(NULL,NULL,NULL);*/
 

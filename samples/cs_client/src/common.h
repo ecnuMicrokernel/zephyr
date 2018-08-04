@@ -1,7 +1,11 @@
-static struct  server* first_server;
-
 #ifndef _HEADERNAME_H
 #define _HEADERNAME_H
+
+struct  server* first_server;
+
+#include <misc/printk.h>
+#include <misc/dlist.h>
+#include <zephyr.h>
 
 #ifndef SUCCESS
 	#define SUCCESS                  0
@@ -10,6 +14,8 @@ static struct  server* first_server;
 	#define FAIL                              -1
 #endif
 #define STACKSIZE 1000
+
+
 /**
  * @typedef server_recv_cb_t
  * @brief Network data receive callback.
@@ -97,6 +103,87 @@ static void  defult_cb(	int ctx,
 	return SUCCESS;
 }
 
+
+
+
+
+
+
+
+
+#define MSG_CONNECT		 	1	//FLAG 建立连接
+#define MSG_DISCONN			-1	//FLAG 断开连接
+#define MSG_DATA			2	//FLAG 数据传输
+#define DATA_MAX_LEN 		50	//消息长度限制
+#define DATA_ITEM_T_SIZE 	sizeof(struct data_item_t)
+
+struct data_item_t
+{
+	int 	flag;
+	char*	data;
+	struct server* 	server;
+	struct client* 	client;
+};
+
+/*
+ * API
+ * TODO: build a data_item_t
+ * 		 if set fail return FAIL else return SUCCESS	
+ * 		 msg will be change here
+ */
+static int build_MSG(struct data_item_t* msg,int flag,
+	char*data,struct server* server,struct client* client){
+	if(sizeof(data)>DATA_MAX_LEN)
+		return FAIL;
+
+	msg->flag=flag;
+	msg->data=data;
+	msg->server=server;
+	msg->client=client;
+	return SUCCESS;
+}
+
+//client
+struct client{
+	sys_dnode_t node;
+	struct callback cb;
+	struct server *server;
+	int IP;
+	struct k_thread threads[1];			//listen线程和recv线程
+	char thread_stacks[1][STACKSIZE];	//两个线程的stack
+};
+
+void client_threads_listen();
+int client_init(	struct  client* client ,
+			int client_IP,
+			connect_cb_t connect_cb,
+			recv_cb_t recv_cb,
+			send_cb_t send_cb,
+			close_cb_t close_cb);
+int client_connect(int port,struct  client* client);
+
+
+//SERVER
+struct server{
+	struct callback cb;					//callback函数集合
+	int port;							//server的ID
+	struct k_thread threads[2];			//listen线程和recv线程
+	char thread_stacks[2][STACKSIZE];	//两个线程的stack
+	char __aligned(4) 
+	msgq_buf[2][10 * DATA_ITEM_T_SIZE]; //定义了listen和recv对应消息队列的buffer
+	struct k_msgq recv_msgq;			//定义了recv对应消息队列
+	struct k_msgq listen_msgq;
+	sys_dlist_t client_list;			//存放连接的client指针
+};
+void PrintList(sys_dlist_t *list) ;
+void server_threads_listen(struct  server *server );
+void server_threads_recv( struct  server *server  );
+int server_init(	struct  server* server ,
+			int port,
+			connect_cb_t connect_cb,
+			recv_cb_t recv_cb,
+			send_cb_t send_cb,
+			close_cb_t close_cb);
 
 #endif
 

@@ -1,7 +1,6 @@
 // callback test
 #include <misc/printk.h>
-#include "server.h"
-#include "client.h"
+#include "common.h"
 static void connect_cb(	int ctx,
 			int status,
 			void *user_data){
@@ -15,8 +14,8 @@ static void  recv_cb(	int ctx,
 
 
 //必须全局变量，否则线程创建会出问题
-struct server test_server;
-struct client test_client;
+static struct server test_server;
+static struct client test_client;
 
 
 
@@ -25,10 +24,12 @@ struct client test_client;
 static void callback_test(){
 
    	server_init(&test_server,80,connect_cb,recv_cb,NULL,NULL);
-      client_init(&test_client,100,connect_cb,recv_cb,NULL,NULL);
-      //send_msg_test(&test_server);
-      api_client_connect(80,&test_client);  
-      printk("end\n");  
+    client_init(&test_client,100,connect_cb,recv_cb,NULL,NULL);
+    //send_msg_test(&test_server);
+    k_sleep(1000);
+
+    client_connect(80,&test_client);  
+    printk("end\n");  
       
    	/*test_server.cb.recv_cb(NULL,NULL,NULL);
    	test_server.cb.connect_cb(NULL,NULL,NULL);*/

@@ -35,7 +35,11 @@ static void callback_test(){
     client_connect(80,&test_client1); 
     client_connect(80,&test_client2); 
     client_connect(80,&test_client3); 
-    
+    k_sleep(1000);
+    api_client_release(&test_client1);
+    api_client_release(&test_client2);
+    api_client_release(&test_client3);
+    api_server_release(&test_server);
     printk("end\n");  
       
    	/*test_server.cb.recv_cb(NULL,NULL,NULL);
@@ -47,3 +51,4 @@ static void callback_test(){
    	//test_client.cb.connect_cb(NULL,NULL,NULL);
    	//testserver.cb.send_cb(NULL,NULL,NULL);
 }
+

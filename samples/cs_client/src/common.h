@@ -166,6 +166,7 @@ int client_init(	struct  client* client ,
 			send_cb_t send_cb,
 			close_cb_t close_cb);
 int client_connect(int port,struct  client* client);
+int api_client_release(struct  client* client_ptr);
 
 
 //SERVER
@@ -189,7 +190,7 @@ int server_init(	struct  server* server ,
 			recv_cb_t recv_cb,
 			send_cb_t send_cb,
 			close_cb_t close_cb);
-
+int api_server_release(struct  server* server_ptr);
 #endif
 
 

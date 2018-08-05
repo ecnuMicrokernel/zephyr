@@ -116,3 +116,27 @@ int server_init(	struct  server* server ,
 
 	return SUCCESS;
 }
+
+int api_server_release(struct  server* server_ptr)
+{
+	printk("enter api_server_release\n" ); 
+
+	//如果server的client列表不为空的话，逐个断连
+	struct client *client_ptr=sys_dlist_peek_head(&server_ptr->client_list);
+	while(client_ptr)
+	{
+		//发送消息给client断连，把client移出client_list
+	  	//server_disconn(client_ptr);
+	  	printk("disconnect client %d\n",client_ptr->IP); 
+	  	sys_dlist_remove(client_ptr);
+		client_ptr=sys_dlist_peek_head(&server_ptr->client_list);
+
+	} 
+	 
+	//结束client的接收消息线程和监听连接线程
+	k_thread_abort(&server_ptr->threads[0]);
+	k_thread_abort(&server_ptr->threads[1]);
+	printk("server %d release\n",server_ptr->port); 
+
+	return SUCCESS;
+}

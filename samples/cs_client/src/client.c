@@ -5,10 +5,10 @@
 /*
  * 监听连接线程，在server_init处启动
  */
-void client_threads_listen(){
+void client_threads_listen(struct  client* client_ptr){
 	while (1) {
-		printk("client's threads_listen\n");
-		return;
+		printk("client %d threads_listen\n",client_ptr->IP);
+	
 		k_sleep(300);
 	}
 }
@@ -35,7 +35,7 @@ int client_init(	struct  client* client ,
 
 	//启动接收消息线程
 	k_thread_create(&(client->threads[0]), &(client->thread_stacks[0][0]), STACKSIZE,
-		client_threads_listen, 0, 0, 0,
+		client_threads_listen, client, 0, 0,
 		K_PRIO_COOP(4), 0, 0);
 	return SUCCESS;
 }
@@ -86,3 +86,21 @@ int client_connect(int port,struct  client* client)
 }
 
 
+
+       
+int api_client_release(struct  client* client_ptr)
+{
+	printk("enter api_client_release\n" ); 
+
+	//如果client的server不为空，则证明client还有连接server，需要disconnect再释放	
+	if(client_ptr->server)
+	{
+	  	//apt_client_disconn(client_ptr);
+	} 
+	 
+	//结束client的接收消息线程
+	k_thread_abort(&client_ptr->threads[0]);
+	printk("Client %d release\n",client_ptr->IP); 
+
+	return SUCCESS;
+}

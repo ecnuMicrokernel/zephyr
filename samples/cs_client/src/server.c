@@ -128,7 +128,7 @@ int api_server_release(struct  server* server_ptr)
 		//发送消息给client断连，把client移出client_list
 	  	//server_disconn(client_ptr);
 	  	printk("disconnect client %d\n",client_ptr->IP); 
-	  	sys_dlist_remove(client_ptr);
+	  	server2client_disconnect(server_ptr,client_ptr);
 		client_ptr=sys_dlist_peek_head(&server_ptr->client_list);
 
 	} 
@@ -139,4 +139,38 @@ int api_server_release(struct  server* server_ptr)
 	printk("server %d release\n",server_ptr->port); 
 
 	return SUCCESS;
+}
+
+//server端发送消息给client端断开连接，并调用deal_disconnect
+int server2client_disconnect(struct  server* server_ptr,struct client *client_ptr){
+	printk("enter api_server_disconnect\n");
+   	printk("server %d| client %d\n",server_ptr->port,client_ptr->IP);
+   	struct container_node *container;
+   	int try=30;//尝试30次操作，如果都不成功则不管发送
+   	struct data_item_t msg; 
+    build_MSG( &msg, MSG_DISCONN, "server disconnect", server_ptr, client_ptr );    
+   	while (k_msgq_put(&(client_ptr->recv_msgq), &msg, K_NO_WAIT)!= 0&&try-->0) {
+	 	k_msgq_purge(&(client_ptr->recv_msgq));
+	}
+   deal_disconnect(server_ptr,client_ptr);
+   return SUCCESS;
+}
+
+//如果client_IP的client在server->client_list里面，则返回该client的地址，否则返回NULL
+struct client* client_in_list(struct  server* server_ptr,int client_IP){
+	 //注意，下面的参数node是container_node结构体中的字段名
+	//sys_dlist_t list=server_ptr->client_list;
+	struct client *client_ptr=NULL;
+    SYS_DLIST_FOR_EACH_CONTAINER(&server_ptr->client_list, client_ptr, node)
+    {
+    	if(client_ptr->IP==client_IP){
+    		break;
+    	}
+    }
+    return client_ptr;
+}
+//把client从server的client_list里面删除
+void deal_disconnect(struct  server* server_ptr,struct client *client_ptr){
+	printf("enter deal_disconnect server:%d client:%d\n",server_ptr->port,client_ptr->IP);
+	sys_dlist_remove(&client_ptr->node);
 }

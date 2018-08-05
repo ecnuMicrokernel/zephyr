@@ -192,6 +192,11 @@ int server_init(	struct  server* server ,
 			send_cb_t send_cb,
 			close_cb_t close_cb);
 int api_server_release(struct  server* server_ptr);
+void deal_disconnect(struct  server* server_ptr,struct client *client_ptr);
+int server2client_disconnect(struct  server* server_ptr,struct client *client_ptr);
+struct client* client_in_list(struct  server* server_ptr,int client_IP);
+void deal_disconnect(struct  server* server_ptr,struct client *client_ptr);
+
 #endif
 
 

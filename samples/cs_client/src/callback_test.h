@@ -20,6 +20,7 @@ static struct client test_client2;
 static struct client test_client3;
 
 
+// 测试client_send;
 
 
 
@@ -36,6 +37,8 @@ static void callback_test(){
     client_connect(80,&test_client2); 
     client_connect(80,&test_client3); 
     
+    client_send(&test_client1);
+    client_disconn(&test_client1);
     printk("end\n");  
       
    	/*test_server.cb.recv_cb(NULL,NULL,NULL);

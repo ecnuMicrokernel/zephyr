@@ -166,7 +166,8 @@ int client_init(	struct  client* client ,
 			send_cb_t send_cb,
 			close_cb_t close_cb);
 int client_connect(int port,struct  client* client);
-
+void client_send(struct  client* client);
+void client_disconn(struct  client* client);
 
 //SERVER
 struct server{

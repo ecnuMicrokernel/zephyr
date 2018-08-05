@@ -75,9 +75,9 @@ static void send_client2server()
   printk( "TEST\t send_client2server():\n" );
   printk( "=============================\n\n" );
 
-  client_send( &test_client1 );
-  client_send( &test_client2 );
-  client_send( &test_client3 );
+  client_send("hello1",&test_client1);
+  client_send("hello2",&test_client2);
+  client_send("hello3",&test_client3);
   printk( "=============================\n\n" );
 
   k_sleep( 300 );

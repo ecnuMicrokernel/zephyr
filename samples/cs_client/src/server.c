@@ -31,9 +31,9 @@ void server_threads_listen(struct  server *server ){
       		PrintList(&server->client_list);
       		build_MSG(&msg,MSG_CONNECT,"accept connect",server,client_ptr);
 	     	 /* send msg to server */
-	      	while (k_msgq_put(&(client_ptr->listen_msgq), &msg, K_NO_WAIT)!= 0) {
+	      	while (k_msgq_put(&(client_ptr->recv_msgq), &msg, K_NO_WAIT)!= 0) {
 	            /* message queue is full: purge old data & try again */
-	                k_msgq_purge(&(client_ptr->listen_msgq));
+	                k_msgq_purge(&(client_ptr->recv_msgq));
 	            }/* data item was successfully added to message queue */
 
     	}
@@ -65,20 +65,6 @@ void server_threads_recv( struct  server *server  )
 			if (server->cb.recv_cb){
 				server->cb.recv_cb(NULL,NULL,NULL);
 			}
-		}else{
-			printk( "MSG_CONNECT:%s\n", msg.data );
-
-			struct data_item_t msg1; 
-            build_MSG( &msg1, MSG_CONNECT, "connect success", server, NULL );    
-      
-            while (k_msgq_put(&server->recv_msgq, &msg1, K_NO_WAIT) != 0) {
-               k_msgq_purge(&server->recv_msgq);
-             }
-
-			if (server->cb.recv_cb){
-				server->cb.recv_cb(NULL,NULL,NULL);
-			}
-
 		}
 
 	}

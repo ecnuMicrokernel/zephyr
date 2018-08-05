@@ -3,15 +3,44 @@
 
 
 /*
- * 监听连接线程，在server_init处启动
+ * 接受消息
  */
-void client_threads_listen(struct  client* client_ptr){
+void client_threads_recv(struct  client* client_ptr){
 	while (1) {
-		printk("client %d threads_listen\n",client_ptr->IP);
+		printk("client %d threads_recv\n",client_ptr->IP);
+
+		struct data_item_t msg; 
+		k_msgq_get( &(client_ptr->recv_msgq), &msg, K_FOREVER ); 
+		printk( "recv ");
+		if(msg.flag==MSG_DATA){
+			printk( "MSG_DATA client%d:%s\n", msg.client->IP,msg.data );
+			if (client_ptr->cb.recv_cb){
+				client_ptr->cb.recv_cb(NULL,NULL,NULL);
+			}
+		}
+        //确认连接
+       if(msg.flag==MSG_CONNECT&&msg.client==client_ptr)
+       {
+       	  printk( "\tCLIENT CONNECT INFO IP:%d\n",msg.server->port );
+          client_ptr->server=msg.server;
+          client_ptr->cb.connect_cb;
+          return SUCCESS;
+       }
+       else{
+          return FAIL;
+       }
+		   		
+		    
 	
 		k_sleep(300);
 	}
 }
+
+
+
+
+
+
 /*
  * API : initial a client, set client's server_port,IP and all callback
   *
@@ -31,11 +60,10 @@ int client_init(	struct  client* client ,
 
 	//接收线程队列信息
 	k_msgq_init(&(client->recv_msgq), client->msgq_buf[0], DATA_ITEM_T_SIZE, 10); 
-	k_msgq_init(&(client->listen_msgq), client->msgq_buf[1], DATA_ITEM_T_SIZE, 10); 
-
+	
 	//启动接收消息线程
 	k_thread_create(&(client->threads[0]), &(client->thread_stacks[0][0]), STACKSIZE,
-		client_threads_listen, client, 0, 0,
+		client_threads_recv, client, 0, 0,
 		K_PRIO_COOP(4), 0, 0);
 	return SUCCESS;
 }
@@ -60,20 +88,7 @@ int client_connect(int port,struct  client* client)
 
 	    /*wait server msg to confirm connect*/  
 		   
-		   if(k_msgq_get(&(client->listen_msgq), &msg, K_FOREVER)==0)
-		   {
-		   		//确认连接
-		       if(msg.flag==MSG_CONNECT&&msg.client==client&&msg.server==server)
-		       {
-		       	  printk( "\tCLIENT CONNECT INFO IP:%d\n",msg.server->port );
-		          client->server=server;
-		          client->cb.connect_cb;
-		          return SUCCESS;
-		       }
-		       else{
-		          return FAIL;
-		       }
-		    }
+		   
 	  
 	   }
 	   else{
@@ -105,11 +120,11 @@ int api_client_release(struct  client* client_ptr)
 	return SUCCESS;
 }
 
-void client_send(struct  client* client)
+void client_send(char *data,struct  client* client)
 {
       struct data_item_t msg;
 	
-	  build_MSG(&msg,MSG_DATA,"hello world",client->server,client);
+	  build_MSG(&msg,MSG_DATA,data,client->server,client);
 	 
 	  while (k_msgq_put(&(client->server->recv_msgq), &msg, K_NO_WAIT)!= 0) {
 	        

@@ -15,7 +15,9 @@ static void  recv_cb(	int ctx,
 
 //必须全局变量，否则线程创建会出问题
 static struct server test_server;
-static struct client test_client;
+static struct client test_client1;
+static struct client test_client2;
+static struct client test_client3;
 
 
 
@@ -24,11 +26,16 @@ static struct client test_client;
 static void callback_test(){
 
    	server_init(&test_server,80,connect_cb,recv_cb,NULL,NULL);
-    client_init(&test_client,100,connect_cb,recv_cb,NULL,NULL);
+    client_init(&test_client1,100,connect_cb,recv_cb,NULL,NULL);
+    client_init(&test_client2,101,connect_cb,recv_cb,NULL,NULL);
+    client_init(&test_client3,102,connect_cb,recv_cb,NULL,NULL);
     //send_msg_test(&test_server);
     k_sleep(1000);
 
-    client_connect(80,&test_client);  
+    client_connect(80,&test_client1); 
+    client_connect(80,&test_client2); 
+    client_connect(80,&test_client3); 
+    
     printk("end\n");  
       
    	/*test_server.cb.recv_cb(NULL,NULL,NULL);

@@ -1,0 +1,118 @@
+#include "common.h"
+
+
+void PrintList(sys_dlist_t *list) //依次打印所有节点
+{
+    struct client *container;
+    printk("print list node:\n");
+    //注意，下面的参数node是container_node结构体中的字段名
+    SYS_DLIST_FOR_EACH_CONTAINER(list, container, node)
+    {
+        printk("node%d   ", container->IP);
+    }
+    printk("\n\n");
+}
+
+
+/*
+ * 监听连接线程，在server_init处启动
+ */
+void server_threads_listen(struct  server *server ){
+  printk("server's threads_listen\n");
+  sys_dlist_init(&server->client_list);
+   while (1) {
+   		struct data_item_t msg; 
+    	k_msgq_get( &(server->listen_msgq), &msg, K_FOREVER );
+    	if(msg.flag==MSG_CONNECT){
+      		struct client*  client_ptr=msg.client;
+      		printk( "\tMSG_CONNECT IP:%d\n", client_ptr->IP );
+
+      		sys_dlist_append(&server->client_list, &(client_ptr->node));
+      		PrintList(&server->client_list);
+      		build_MSG(&msg,MSG_CONNECT,"accept connect",server,client_ptr);
+	     	 /* send msg to server */
+	      	while (k_msgq_put(&(client_ptr->listen_msgq), &msg, K_NO_WAIT)!= 0) {
+	            /* message queue is full: purge old data & try again */
+	                k_msgq_purge(&(client_ptr->listen_msgq));
+	            }/* data item was successfully added to message queue */
+
+    	}
+    	else if(msg.flag==MSG_DISCONN){
+     		printk( "MSG_DISCONN:%s\n", msg.data );
+      		if (server->cb.connect_cb)
+        	server->cb.connect_cb(NULL,NULL,NULL);
+      
+    	}
+   }
+}
+
+
+
+/*
+ * 服务器接收消息，监听对应的server->recv_msgq消息队列
+ * 如果收到的消息是MSG_DATA就调用recv回调函数，否则输出错误信息NODEFINE
+ */
+void server_threads_recv( struct  server *server  )
+{
+	printk( "enter server_threads_recv()\n");
+	while ( 1 )
+	{
+		struct data_item_t msg; 
+		k_msgq_get( &(server->recv_msgq), &msg, K_FOREVER ); 
+		printk( "recv ");
+		if(msg.flag==MSG_DATA){
+			printk( "MSG_DATA:%s\n", msg.data );
+			if (server->cb.recv_cb){
+				server->cb.recv_cb(NULL,NULL,NULL);
+			}
+		}else{
+			printk( "MSG_CONNECT:%s\n", msg.data );
+
+			struct data_item_t msg1; 
+            build_MSG( &msg1, MSG_CONNECT, "connect success", server, NULL );    
+      
+            while (k_msgq_put(&server->recv_msgq, &msg1, K_NO_WAIT) != 0) {
+               k_msgq_purge(&server->recv_msgq);
+             }
+
+			if (server->cb.recv_cb){
+				server->cb.recv_cb(NULL,NULL,NULL);
+			}
+
+		}
+
+	}
+}
+
+/*
+ * API : initial a server, set server's port and all callback
+ *
+ */
+int server_init(	struct  server* server ,
+			int port,
+			connect_cb_t connect_cb,
+			recv_cb_t recv_cb,
+			send_cb_t send_cb,
+			close_cb_t close_cb){
+	printk("enter server_init\n");
+	if(!port||port<=0){
+		printk("INVALID PORT\n" );
+		return FAIL;
+	}
+	printk("VALID PORT\n" );
+	first_server=server;
+	server->port=port;
+	set_cb(&server->cb,connect_cb,recv_cb,send_cb,close_cb);
+
+	k_msgq_init(&(server->recv_msgq), server->msgq_buf[0], DATA_ITEM_T_SIZE, 10); 
+	k_msgq_init(&(server->listen_msgq), server->msgq_buf[1], DATA_ITEM_T_SIZE, 10); 
+	//创建监听连接线程和接收消息线程
+	k_thread_create(&(server->threads[0]), &(server->thread_stacks[0][0]), STACKSIZE,
+			server_threads_listen, server, 0, 0,
+			K_PRIO_COOP(4), 0, 0);
+	k_thread_create(&( server->threads[1]), &( server->thread_stacks[1][0]), STACKSIZE,
+			server_threads_recv, server, 0, 0,
+			K_PRIO_COOP(4), 0, 0);
+
+	return SUCCESS;
+}

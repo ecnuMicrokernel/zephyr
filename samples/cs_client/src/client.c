@@ -104,3 +104,42 @@ int api_client_release(struct  client* client_ptr)
 
 	return SUCCESS;
 }
+
+void client_send(struct  client* client)
+{
+      struct data_item_t msg;
+	
+	  build_MSG(&msg,MSG_DATA,"hello world",client->server,client);
+	 
+	  while (k_msgq_put(&(client->server->recv_msgq), &msg, K_NO_WAIT)!= 0) {
+	        
+	            k_msgq_purge(&(client->server->recv_msgq));
+	        }
+
+	  client->cb.send_cb;
+
+}
+
+
+void client_disconn(struct  client* client)
+{
+      struct data_item_t msg;
+	
+	  build_MSG(&msg,MSG_DISCONN,"request disconnect",client->server,client);
+	 
+	  while (k_msgq_put(&(client->server->listen_msgq), &msg, K_NO_WAIT)!= 0) {
+	        
+	            k_msgq_purge(&(client->server->listen_msgq));
+	        }
+
+	 deal_disconn( client);
+
+
+}
+
+
+void deal_disconn(struct  client* client)
+{
+	 client->server=NULL;        
+	 client->cb.close_cb;
+}

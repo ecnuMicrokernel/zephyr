@@ -38,9 +38,9 @@ void server_threads_listen(struct  server *server ){
 
     	}
     	else if(msg.flag==MSG_DISCONN){
-     		printk( "MSG_DISCONN:%s\n", msg.data );
-      		if (server->cb.connect_cb)
-        	server->cb.connect_cb(NULL,NULL,NULL);
+     		printk( "MSG_DISCONN client%d:%s\n",msg.client->IP, msg.data );
+      		if (server->cb.close_cb)
+        	server->cb.close_cb(NULL,NULL,NULL);
       
     	}
    }
@@ -61,7 +61,7 @@ void server_threads_recv( struct  server *server  )
 		k_msgq_get( &(server->recv_msgq), &msg, K_FOREVER ); 
 		printk( "recv ");
 		if(msg.flag==MSG_DATA){
-			printk( "MSG_DATA:%s\n", msg.data );
+			printk( "MSG_DATA client%d:%s\n", msg.client->IP,msg.data );
 			if (server->cb.recv_cb){
 				server->cb.recv_cb(NULL,NULL,NULL);
 			}

@@ -3,6 +3,5 @@
 
 void main(void)
 {   
-	callback_test();
-	//thread_test();
+	entry_test();
 }

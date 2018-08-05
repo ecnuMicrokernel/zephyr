@@ -20,35 +20,51 @@ static struct client test_client2;
 static struct client test_client3;
 
 
+// 测试client_send;
 
-
-
-static void callback_test(){
-
-   	server_init(&test_server,80,connect_cb,recv_cb,NULL,NULL);
+static void init_CS(){
+    server_init(&test_server,80,connect_cb,recv_cb,NULL,NULL);
     client_init(&test_client1,100,connect_cb,recv_cb,NULL,NULL);
     client_init(&test_client2,101,connect_cb,recv_cb,NULL,NULL);
     client_init(&test_client3,102,connect_cb,recv_cb,NULL,NULL);
-    //send_msg_test(&test_server);
-    k_sleep(1000);
+    k_sleep(300);
 
-    client_connect(80,&test_client1); 
-    client_connect(80,&test_client2); 
-    client_connect(80,&test_client3); 
-    k_sleep(1000);
+}
+
+static void connect_server(){
+  client_connect(80,&test_client1); 
+  client_connect(80,&test_client2); 
+  client_connect(80,&test_client3); 
+  k_sleep(300);
+}
+
+static void release_CS(){
     api_client_release(&test_client1);
     api_client_release(&test_client2);
     api_client_release(&test_client3);
     api_server_release(&test_server);
-    printk("end\n");  
-      
-   	/*test_server.cb.recv_cb(NULL,NULL,NULL);
-   	test_server.cb.connect_cb(NULL,NULL,NULL);*/
+    k_sleep(300);
 
-   	//client_init(&test_client,80,connect_cb,recv_cb,NULL,NULL,100);
-   	//printk("client_init\n");
-   	//test_client.cb.recv_cb(NULL,NULL,NULL);
-   	//test_client.cb.connect_cb(NULL,NULL,NULL);
-   	//testserver.cb.send_cb(NULL,NULL,NULL);
+}
+static void send_client2server(){
+  client_send(&test_client1);
+  client_send(&test_client2);
+  client_send(&test_client3);
+  k_sleep(300);
+}
+static void disconn_client2server(){
+  client_disconn(&test_client1);
+}  
+
+//main 入口
+static void entry_test(){
+
+  init_CS();
+  connect_server();
+  send_client2server();
+  disconn_client2server();
+  release_CS();
+  printk("end\n");  
+
 }
 

@@ -18,6 +18,14 @@ void client_threads_recv(struct  client* client_ptr){
 				client_ptr->cb.recv_cb(NULL,NULL,NULL);
 			}
 		}
+
+		if(msg.flag==MSG_DISCONN){
+			printk( "MSG_DISCONN client%d:%s\n", msg.client->IP,msg.data );
+			client_ptr->server=NULL;
+			if (client_ptr->cb.recv_cb){
+				client_ptr->cb.recv_cb(NULL,NULL,NULL);
+			}
+		}
         //确认连接
        if(msg.flag==MSG_CONNECT&&msg.client==client_ptr)
        {
@@ -111,7 +119,7 @@ int api_client_release(struct  client* client_ptr)
 	//如果client的server不为空，则证明client还有连接server，需要disconnect再释放	
 	if(client_ptr->server)
 	{
-	  	//apt_client_disconn(client_ptr);
+	  	api_client_disconn(client_ptr);
 	} 
 	 
 	//结束client的接收消息线程

@@ -54,12 +54,15 @@ void server_threads_listen(struct  server *server_ptr ){
     	if(msg.flag==MSG_CONNECT){
       		printk( "\tMSG_CONNECT IP:%d\n",client_ptr->IP );
 
+
       		sys_dlist_append(&server_ptr->client_list, &(client_ptr->node));
       		PrintList(&server_ptr->client_list);
       		build_MSG(&msg,MSG_CONNECT,"accept connect",server_ptr,client_ptr);
-	      	while (k_msgq_put(&(client_ptr->listen_msgq), &msg, K_NO_WAIT)!= 0) {
-	                k_msgq_purge(&(client_ptr->listen_msgq));
-	            }
+	     	 /* send msg to server */
+	      	while (k_msgq_put(&(client_ptr->recv_msgq), &msg, K_NO_WAIT)!= 0) {
+	            /* message queue is full: purge old data & try again */
+	                k_msgq_purge(&(client_ptr->recv_msgq));
+	            }/* data item was successfully added to message queue */
 
     	}
     	else if(msg.flag==MSG_DISCONN){

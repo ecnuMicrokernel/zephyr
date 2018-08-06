@@ -152,23 +152,23 @@ struct client{
 	struct k_thread threads[1];			
 	char thread_stacks[1][STACKSIZE];
 	char __aligned(4) 
-	msgq_buf[2][10 * DATA_ITEM_T_SIZE]; //定义了recv消息队列的buffer
+	msgq_buf[1][10 * DATA_ITEM_T_SIZE]; //定义了recv消息队列的buffer
 	struct k_msgq recv_msgq;			//定义了recv消息队列	
-	struct k_msgq listen_msgq;			//接受确认连接信息
+	
 
 };
 
-void client_threads_listen();
+void client_threads_recv();
 int client_init(	struct  client* client ,
 			int client_IP,
 			connect_cb_t connect_cb,
 			recv_cb_t recv_cb,
 			send_cb_t send_cb,
 			close_cb_t close_cb);
-int client_connect(int port,struct  client* client);
+int api_client_connect(int port,struct  client* client);
 int api_client_release(struct  client* client_ptr);
-void client_send(struct  client* client);
-void client_disconn(struct  client* client);
+void api_client_send(char *data,struct  client* client);
+void api_client_disconn(struct  client* client);
 
 //SERVER
 struct server{
@@ -196,6 +196,7 @@ void deal_disconnect(struct  server* server_ptr,struct client *client_ptr);
 int server2client_disconnect(struct  server* server_ptr,struct client *client_ptr);
 void deal_disconnect(struct  server* server_ptr,struct client *client_ptr);
 bool    client_in_list(sys_dlist_t *list,sys_dnode_t *node);
+
 
 #endif
 

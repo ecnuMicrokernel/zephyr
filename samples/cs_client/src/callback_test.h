@@ -1,6 +1,7 @@
 /* callback test */
 #include <misc/printk.h>
 #include "common.h"
+#include "client_list.h"
 static void connect_cb( int ctx,
       int status,
       void *user_data )
@@ -83,7 +84,31 @@ static void send_client2server()
 
   k_sleep( 300 );
 }
+static void send_server2client()
+{
+  printk( "TEST\t send_server2client():\n" );
+  printk( "=============================\n\n" );
+  add_clients(&test_server,&test_client1,100);
+  add_clients(&test_server,&test_client2,101);
+  //remove_client(&test_server,101);
+  add_clients(&test_server,&test_client3,102);
 
+  api_server_send(&test_server,100,MSG_DATA,"api_server_send100");
+  api_server_send(&test_server,101,MSG_DATA,"api_server_send101");
+  api_server_send(&test_server,102,MSG_DATA,"api_server_send102");
+  struct data_item_t msg; 
+
+  k_msgq_get( &(test_client1.recv_msgq), &msg, K_FOREVER );
+  printk( "%s\n" ,msg.data); 
+  k_msgq_get( &(test_client2.recv_msgq), &msg, K_FOREVER );
+  printk( "%s\n" ,msg.data); 
+  k_msgq_get( &(test_client3.recv_msgq), &msg, K_FOREVER );
+  printk( "%s\n" ,msg.data); 
+
+
+  k_sleep( 300 );
+  printk( "=============================\n\n" );
+}
 
 static void disconn_client2server()
 {
@@ -91,6 +116,7 @@ static void disconn_client2server()
   printk( "=============================\n\n" );
 
   api_client_disconn( &test_client1 );
+  api_client_disconn( &test_client2 );
   printk( "=============================\n\n" );
 }
 
@@ -101,6 +127,10 @@ static void entry_test()
   init_CS();
   connect_server();
   send_client2server();
+
+  send_server2client();
+  
+    
   disconn_client2server();
   release_CS();
   printk( "end\n" );

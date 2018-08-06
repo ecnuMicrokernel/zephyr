@@ -1,5 +1,5 @@
 #include "common.h"
-
+#include "client_list.h"
 
 void PrintList(sys_dlist_t *list) //依次打印所有节点
 {
@@ -139,13 +139,34 @@ int server_init(	struct  server* server ,
 
 	return SUCCESS;
 }
+void api_server_send( struct  server *server,int ip,int flag,char* data)
+{
+      //printk( "api_send\n" ); 
+      //sys_slist_t client_list=server->client_list;
+      struct client *client=find_client_by_ip(server,ip);
+      
+      if(client!=NULL){
+         struct data_item_t msg; 
+         build_MSG(&msg,flag,data,server,client);
+         send(client,msg);
+       }
+}
+ void send( struct  client *client, struct data_item_t msg)
+{
 
+      while (k_msgq_put(&client->recv_msgq, &msg, K_NO_WAIT) != 0) {
+            /*  message queue is full: purge old data & try again */
+            k_msgq_purge(&client->recv_msgq);
+        }
+      
+}
 int api_server_release(struct  server* server_ptr)
 {
 	printk("enter api_server_release\n" ); 
 
 	//如果server的client列表不为空的话，逐个断连
 	struct client *client_ptr=sys_dlist_peek_head(&server_ptr->client_list);
+	PrintList(&server_ptr->client_list);
 	while(client_ptr)
 	{
 		//发送消息给client断连，把client移出client_list
@@ -186,5 +207,6 @@ int server2client_disconnect(struct  server* server_ptr,struct client *client_pt
 //把client从server的client_list里面删除
 void deal_disconnect(struct  server* server_ptr,struct client *client_ptr){
 	printk("enter deal_disconnect server:%d client:%d\n",server_ptr->port,client_ptr->IP);
-	sys_dlist_remove(&client_ptr->node);
+	//sys_dlist_remove(&client_ptr->node);
+	remove_client(server_ptr,client_ptr);
 }

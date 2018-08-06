@@ -168,6 +168,7 @@ int client_init(	struct  client* client ,
 int api_client_connect(int port,struct  client* client);
 int api_client_release(struct  client* client_ptr);
 void api_client_send(char *data,struct  client* client);
+void api_server_send(struct  server *server,int ip,int flag,char* data);
 void api_client_disconn(struct  client* client);
 
 //SERVER

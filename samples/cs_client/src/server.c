@@ -1,5 +1,5 @@
 #include "common.h"
-
+#include "client_list.h"
 
 void PrintList(sys_dlist_t *list) //依次打印所有节点
 {
@@ -168,7 +168,27 @@ int server_init(	struct  server* server ,
 
 	return SUCCESS;
 }
+void api_server_send( struct  server *server,int ip,int flag,char* data)
+{
+      //printk( "api_send\n" ); 
+      //sys_slist_t client_list=server->client_list;
+      struct client *client=find_client_by_ip(server,ip);
+      
+      if(client!=NULL){
+         struct data_item_t msg; 
+         build_MSG(&msg,flag,data,server,client);
+         send(client,msg);
+       }
+}
+ void send( struct  client *client, struct data_item_t msg)
+{
 
+      while (k_msgq_put(&client->recv_msgq, &msg, K_NO_WAIT) != 0) {
+            /*  message queue is full: purge old data & try again */
+            k_msgq_purge(&client->recv_msgq);
+        }
+      
+}
 int api_server_release(struct  server* server_ptr)
 {
 	#ifndef DEBUG_API_SERVER_RELEASE
@@ -223,5 +243,5 @@ void deal_disconnect(struct  server* server_ptr,struct client *client_ptr){
 	#ifndef DEBUG_DEAL_DISCONNECT
 	printk("enter deal_disconnect server:%d client:%d\n",server_ptr->port,client_ptr->IP);
 	#endif
-	sys_dlist_remove(&client_ptr->node);
+	remove_client(server_ptr,client_ptr);
 }

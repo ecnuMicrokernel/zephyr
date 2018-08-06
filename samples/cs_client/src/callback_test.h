@@ -49,6 +49,9 @@ static void connect_server()
   client_connect( 80, &test_client1 );
   client_connect( 80, &test_client2 );
   client_connect( 80, &test_client3 );
+  //client_connect( 80, &test_client1 );
+  
+
   printk( "=============================\n\n" );
 
   k_sleep( 300 );

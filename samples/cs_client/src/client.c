@@ -44,9 +44,10 @@ int client_init(	struct  client* client ,
        
 int client_connect(int port,struct  client* client)
 {
-	//printk("enter client_connnect :%d\n",client->server); 
+	printk("enter client_connnect :%d\n",client->server); 
 	struct server* server=first_server;
-	if(!client->server)
+
+	if(1)
 	  {
 	      
 	      struct data_item_t msg;

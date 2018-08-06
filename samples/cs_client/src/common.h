@@ -194,8 +194,8 @@ int server_init(	struct  server* server ,
 int api_server_release(struct  server* server_ptr);
 void deal_disconnect(struct  server* server_ptr,struct client *client_ptr);
 int server2client_disconnect(struct  server* server_ptr,struct client *client_ptr);
-struct client* client_in_list(struct  server* server_ptr,int client_IP);
 void deal_disconnect(struct  server* server_ptr,struct client *client_ptr);
+bool    client_in_list(sys_dlist_t *list,sys_dnode_t *node);
 
 #endif
 

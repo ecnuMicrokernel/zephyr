@@ -4,44 +4,69 @@
 void PrintList(sys_dlist_t *list) //依次打印所有节点
 {
     struct client *container;
-    printk("print list node:\n");
+    printf("print list node:\n");
     //注意，下面的参数node是container_node结构体中的字段名
     SYS_DLIST_FOR_EACH_CONTAINER(list, container, node)
     {
-        printk("node%d   ", container->IP);
+        printf("node%d   ", container->IP);
+    }
+    printf("\n\n");
+}    
+
+//如果client_IP的client在server->client_list里面，则返回该client的地址，否则返回NULL
+bool  client_in_list(sys_dlist_t *list,sys_dnode_t *node){
+	sys_dnode_t *container;
+    printk("print list node:\n");
+    //注意，下面的参数node是container_node结构体中的字段名
+    SYS_DLIST_FOR_EACH_NODE(list, container)
+    {
+    	if(container==node){
+        	printk("finde node%d   ", node);
+        	return true;	
+    	}
     }
     printk("\n\n");
+   	return false;
 }
-
-
 /*
  * 监听连接线程，在server_init处启动
  */
-void server_threads_listen(struct  server *server ){
+void server_threads_listen(struct  server *server_ptr ){
   printk("server's threads_listen\n");
-  sys_dlist_init(&server->client_list);
+  sys_dlist_init(&server_ptr->client_list);
    while (1) {
    		struct data_item_t msg; 
-    	k_msgq_get( &(server->listen_msgq), &msg, K_FOREVER );
-    	if(msg.flag==MSG_CONNECT){
-      		struct client*  client_ptr=msg.client;
-      		printk( "\tMSG_CONNECT IP:%d\n", client_ptr->IP );
+    	k_msgq_get( &(server_ptr->listen_msgq), &msg, K_FOREVER );
 
-      		sys_dlist_append(&server->client_list, &(client_ptr->node));
-      		PrintList(&server->client_list);
-      		build_MSG(&msg,MSG_CONNECT,"accept connect",server,client_ptr);
-	     	 /* send msg to server */
+    	//检查会不会重复连接
+		/*if(client_in_list(&server_ptr->client_list,&msg.client->node)){
+			printf("server%d already have client%d\n",server_ptr->port,msg.client->IP);
+			continue;
+		}*/
+		//void  client_in_list(sys_dlist_t *list,int client_IP,struct client* result){
+		struct client *client_ptr=msg.client;
+
+		if(!client_ptr){
+			printk("client %d isn't connect with server%d\n",
+				client_ptr->IP,server_ptr->port);
+			continue;
+		}
+    	if(msg.flag==MSG_CONNECT){
+      		printk( "\tMSG_CONNECT IP:%d\n",client_ptr->IP );
+
+      		sys_dlist_append(&server_ptr->client_list, &(client_ptr->node));
+      		PrintList(&server_ptr->client_list);
+      		build_MSG(&msg,MSG_CONNECT,"accept connect",server_ptr,client_ptr);
 	      	while (k_msgq_put(&(client_ptr->listen_msgq), &msg, K_NO_WAIT)!= 0) {
-	            /* message queue is full: purge old data & try again */
 	                k_msgq_purge(&(client_ptr->listen_msgq));
-	            }/* data item was successfully added to message queue */
+	            }
 
     	}
     	else if(msg.flag==MSG_DISCONN){
-     		printk( "MSG_DISCONN client%d:%s\n",msg.client->IP, msg.data );
-      		if (server->cb.close_cb)
-        	server->cb.close_cb(NULL,NULL,NULL);
-      
+     		printk("MSG_DISCONN client%d:%s\n",msg.client->IP, msg.data );
+      		deal_disconnect(server_ptr,client_ptr);
+      		if (server_ptr->cb.close_cb)
+        		server_ptr->cb.close_cb(NULL,NULL,NULL);
     	}
    }
 }
@@ -52,33 +77,28 @@ void server_threads_listen(struct  server *server ){
  * 服务器接收消息，监听对应的server->recv_msgq消息队列
  * 如果收到的消息是MSG_DATA就调用recv回调函数，否则输出错误信息NODEFINE
  */
-void server_threads_recv( struct  server *server  )
+void server_threads_recv( struct  server *server_ptr  )
 {
 	printk( "enter server_threads_recv()\n");
 	while ( 1 )
 	{
 		struct data_item_t msg; 
-		k_msgq_get( &(server->recv_msgq), &msg, K_FOREVER ); 
+		k_msgq_get( &(server_ptr->recv_msgq), &msg, K_FOREVER ); 
 		printk( "recv ");
+		PrintList(&server_ptr->client_list);
+
+		struct client *client_ptr=msg.client;
+		//=client_in_list(server_ptr,msg.client->IP);
+		if(!client_ptr){
+			printk("client %d isn't connect with server%d\n",
+				client_ptr->IP,server_ptr->port);
+			continue;
+		}
 		if(msg.flag==MSG_DATA){
 			printk( "MSG_DATA client%d:%s\n", msg.client->IP,msg.data );
-			if (server->cb.recv_cb){
-				server->cb.recv_cb(NULL,NULL,NULL);
+			if (server_ptr->cb.recv_cb){
+				server_ptr->cb.recv_cb(NULL,NULL,NULL);
 			}
-		}else{
-			printk( "MSG_CONNECT:%s\n", msg.data );
-
-			struct data_item_t msg1; 
-            build_MSG( &msg1, MSG_CONNECT, "connect success", server, NULL );    
-      
-            while (k_msgq_put(&server->recv_msgq, &msg1, K_NO_WAIT) != 0) {
-               k_msgq_purge(&server->recv_msgq);
-             }
-
-			if (server->cb.recv_cb){
-				server->cb.recv_cb(NULL,NULL,NULL);
-			}
-
 		}
 
 	}
@@ -156,21 +176,12 @@ int server2client_disconnect(struct  server* server_ptr,struct client *client_pt
    return SUCCESS;
 }
 
-//如果client_IP的client在server->client_list里面，则返回该client的地址，否则返回NULL
-struct client* client_in_list(struct  server* server_ptr,int client_IP){
-	 //注意，下面的参数node是container_node结构体中的字段名
-	//sys_dlist_t list=server_ptr->client_list;
-	struct client *client_ptr=NULL;
-    SYS_DLIST_FOR_EACH_CONTAINER(&server_ptr->client_list, client_ptr, node)
-    {
-    	if(client_ptr->IP==client_IP){
-    		break;
-    	}
-    }
-    return client_ptr;
-}
+
+
+
+
 //把client从server的client_list里面删除
 void deal_disconnect(struct  server* server_ptr,struct client *client_ptr){
-	printf("enter deal_disconnect server:%d client:%d\n",server_ptr->port,client_ptr->IP);
+	printk("enter deal_disconnect server:%d client:%d\n",server_ptr->port,client_ptr->IP);
 	sys_dlist_remove(&client_ptr->node);
 }

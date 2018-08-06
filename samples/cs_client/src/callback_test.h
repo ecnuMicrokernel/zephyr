@@ -1,6 +1,18 @@
 /* callback test */
 #include <misc/printk.h>
 #include "common.h"
+#define DEBUG_CLIENT_THREADS_recv 1
+#define DEBUG_CLIENT_INIT         1
+#define DEBUG_API_CILENT_CONNECT 1
+#define DEBUG_API_CILENT_RELEASE 1
+#define DEBUG_SERVER_PRINTLIST  1
+#define DEBUG_CLIENT_IN_LIST      1
+#define EBUG_SERVER_THREADS_LISTEN  1
+#define DEBUG_SERVER_THREADS_RECV 1
+#define DEBUG_SERVER_INIT   1
+#define DEBUG_API_SERVER_RELEASE  1
+#define DEBUG_SERVER2CLIENT_DISCONNECT 1
+#define DEBUG_DEAL_DISCONNECT 1
 static void connect_cb( int ctx,
       int status,
       void *user_data )

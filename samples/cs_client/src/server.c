@@ -4,11 +4,15 @@
 void PrintList(sys_dlist_t *list) //依次打印所有节点
 {
     struct client *container;
+    #ifndef DEBUG_SERVER_PRINTLIST
     printf("print list node:\n");
+    #endif
     //注意，下面的参数node是container_node结构体中的字段名
     SYS_DLIST_FOR_EACH_CONTAINER(list, container, node)
     {
+    	 #ifndef DEBUG_SERVER_PRINTLIST
         printf("node%d   ", container->IP);
+        #endif
     }
     printf("\n\n");
 }    
@@ -16,12 +20,16 @@ void PrintList(sys_dlist_t *list) //依次打印所有节点
 //如果client_IP的client在server->client_list里面，则返回该client的地址，否则返回NULL
 bool  client_in_list(sys_dlist_t *list,sys_dnode_t *node){
 	sys_dnode_t *container;
+	#ifndef DEBUG_CLIENT_IN_LIST
     printk("print list node:\n");
+    #endif
     //注意，下面的参数node是container_node结构体中的字段名
     SYS_DLIST_FOR_EACH_NODE(list, container)
     {
     	if(container==node){
+    		#ifndef DEBUG_CLIENT_IN_LIST
         	printk("finde node%d   ", node);
+        	#endif
         	return true;	
     	}
     }
@@ -32,7 +40,9 @@ bool  client_in_list(sys_dlist_t *list,sys_dnode_t *node){
  * 监听连接线程，在server_init处启动
  */
 void server_threads_listen(struct  server *server_ptr ){
+	#ifndef DEBUG_SERVER_THREADS_LISTEN
   printk("server's threads_listen\n");
+  #endif
   sys_dlist_init(&server_ptr->client_list);
    while (1) {
    		struct data_item_t msg; 
@@ -47,14 +57,17 @@ void server_threads_listen(struct  server *server_ptr ){
 		struct client *client_ptr=msg.client;
 
 		if(!client_ptr){
+			#ifndef DEBUG_SERVER_THREADS_LISTEN
 			printk("client %d isn't connect with server%d\n",
 				client_ptr->IP,server_ptr->port);
+			#endif
 			continue;
 		}
     	if(msg.flag==MSG_CONNECT){
+    		#ifndef DEBUG_SERVER_THREADS_LISTEN
       		printk( "\tMSG_CONNECT IP:%d\n",client_ptr->IP );
 
-
+      		#endif
       		sys_dlist_append(&server_ptr->client_list, &(client_ptr->node));
       		PrintList(&server_ptr->client_list);
       		build_MSG(&msg,MSG_CONNECT,"accept connect",server_ptr,client_ptr);
@@ -66,7 +79,9 @@ void server_threads_listen(struct  server *server_ptr ){
 
     	}
     	else if(msg.flag==MSG_DISCONN){
+    		#ifndef DEBUG_SERVER_THREADS_LISTEN
      		printk("MSG_DISCONN client%d:%s\n",msg.client->IP, msg.data );
+     		#endif
       		deal_disconnect(server_ptr,client_ptr);
       		if (server_ptr->cb.close_cb)
         		server_ptr->cb.close_cb(NULL,NULL,NULL);
@@ -82,23 +97,31 @@ void server_threads_listen(struct  server *server_ptr ){
  */
 void server_threads_recv( struct  server *server_ptr  )
 {
+	#ifndef DEBUG_SERVER_THREADS_RECV
 	printk( "enter server_threads_recv()\n");
+	#endif
 	while ( 1 )
 	{
 		struct data_item_t msg; 
 		k_msgq_get( &(server_ptr->recv_msgq), &msg, K_FOREVER ); 
+		#ifndef DEBUG_SERVER_THREADS_RECV
 		printk( "recv ");
+		#endif
 		PrintList(&server_ptr->client_list);
 
 		struct client *client_ptr=msg.client;
 		//=client_in_list(server_ptr,msg.client->IP);
 		if(!client_ptr){
+				#ifndef DEBUG_SERVER_THREADS_RECV
 			printk("client %d isn't connect with server%d\n",
 				client_ptr->IP,server_ptr->port);
+			#endif
 			continue;
 		}
 		if(msg.flag==MSG_DATA){
+			#ifndef DEBUG_SERVER_THREADS_RECV
 			printk( "MSG_DATA client%d:%s\n", msg.client->IP,msg.data );
+			#endif
 			if (server_ptr->cb.recv_cb){
 				server_ptr->cb.recv_cb(NULL,NULL,NULL);
 			}
@@ -117,12 +140,18 @@ int server_init(	struct  server* server ,
 			recv_cb_t recv_cb,
 			send_cb_t send_cb,
 			close_cb_t close_cb){
+	#ifndef DEBUG_SERVER_INIT
 	printk("enter server_init\n");
+	#endif
 	if(!port||port<=0){
+		#ifndef DEBUG_SERVER_INIT
 		printk("INVALID PORT\n" );
+		#endif
 		return FAIL;
 	}
+	#ifndef DEBUG_SERVER_INIT
 	printk("VALID PORT\n" );
+	#endif
 	first_server=server;
 	server->port=port;
 	set_cb(&server->cb,connect_cb,recv_cb,send_cb,close_cb);
@@ -142,15 +171,18 @@ int server_init(	struct  server* server ,
 
 int api_server_release(struct  server* server_ptr)
 {
+	#ifndef DEBUG_API_SERVER_RELEASE
 	printk("enter api_server_release\n" ); 
-
+ 	#endif
 	//如果server的client列表不为空的话，逐个断连
 	struct client *client_ptr=sys_dlist_peek_head(&server_ptr->client_list);
 	while(client_ptr)
 	{
 		//发送消息给client断连，把client移出client_list
 	  	//server_disconn(client_ptr);
+	  	#ifndef DEBUG_API_SERVER_RELEASE
 	  	printk("disconnect client %d\n",client_ptr->IP); 
+	  	#endif
 	  	server2client_disconnect(server_ptr,client_ptr);
 		client_ptr=sys_dlist_peek_head(&server_ptr->client_list);
 
@@ -159,15 +191,18 @@ int api_server_release(struct  server* server_ptr)
 	//结束client的接收消息线程和监听连接线程
 	k_thread_abort(&server_ptr->threads[0]);
 	k_thread_abort(&server_ptr->threads[1]);
+	#ifndef DEBUG_API_SERVER_RELEASE
 	printk("server %d release\n",server_ptr->port); 
-
+	#endif
 	return SUCCESS;
 }
 
 //server端发送消息给client端断开连接，并调用deal_disconnect
 int server2client_disconnect(struct  server* server_ptr,struct client *client_ptr){
+	#ifndef DEBUG_SERVER2CLIENT_DISCONNECT
 	printk("enter api_server_disconnect\n");
    	printk("server %d| client %d\n",server_ptr->port,client_ptr->IP);
+   	#endif
    	struct container_node *container;
    	int try=30;//尝试30次操作，如果都不成功则不管发送
    	struct data_item_t msg; 
@@ -185,6 +220,8 @@ int server2client_disconnect(struct  server* server_ptr,struct client *client_pt
 
 //把client从server的client_list里面删除
 void deal_disconnect(struct  server* server_ptr,struct client *client_ptr){
+	#ifndef DEBUG_DEAL_DISCONNECT
 	printk("enter deal_disconnect server:%d client:%d\n",server_ptr->port,client_ptr->IP);
+	#endif
 	sys_dlist_remove(&client_ptr->node);
 }

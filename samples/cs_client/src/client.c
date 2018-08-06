@@ -70,7 +70,7 @@ int client_init(	struct  client* client ,
 
 
        
-int client_connect(int port,struct  client* client)
+int api_client_connect(int port,struct  client* client)
 {
 	//printk("enter client_connnect :%d\n",client->server); 
 	struct server* server=first_server;
@@ -120,7 +120,7 @@ int api_client_release(struct  client* client_ptr)
 	return SUCCESS;
 }
 
-void client_send(char *data,struct  client* client)
+void api_client_send(char *data,struct  client* client)
 {
       struct data_item_t msg;
 	
@@ -136,7 +136,7 @@ void client_send(char *data,struct  client* client)
 }
 
 
-void client_disconn(struct  client* client)
+void api_client_disconn(struct  client* client)
 {
       struct data_item_t msg;
 	
@@ -147,13 +147,13 @@ void client_disconn(struct  client* client)
 	            k_msgq_purge(&(client->server->listen_msgq));
 	        }
 
-	 deal_disconn( client);
+	 api_deal_disconn( client);
 
 
 }
 
 
-void deal_disconn(struct  client* client)
+void api_deal_disconn(struct  client* client)
 {
 	 client->server=NULL;        
 	 client->cb.close_cb;

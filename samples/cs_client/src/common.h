@@ -165,10 +165,10 @@ int client_init(	struct  client* client ,
 			recv_cb_t recv_cb,
 			send_cb_t send_cb,
 			close_cb_t close_cb);
-int client_connect(int port,struct  client* client);
+int api_client_connect(int port,struct  client* client);
 int api_client_release(struct  client* client_ptr);
-void client_send(char *data,struct  client* client);
-void client_disconn(struct  client* client);
+void api_client_send(char *data,struct  client* client);
+void api_client_disconn(struct  client* client);
 
 //SERVER
 struct server{

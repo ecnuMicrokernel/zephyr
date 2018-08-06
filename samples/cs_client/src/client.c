@@ -7,20 +7,25 @@
  */
 void client_threads_recv(struct  client* client_ptr){
 	while (1) {
+		#ifndef DEBUG_CLIENT_THREADS_recv
 		printk("client %d threads_recv\n",client_ptr->IP);
-
+		#endif
 		struct data_item_t msg; 
 		k_msgq_get( &(client_ptr->recv_msgq), &msg, K_FOREVER ); 
 		printk( "recv ");
 		if(msg.flag==MSG_DATA){
+			#ifndef DEBUG_CLIENT_THREADS_recv
 			printk( "MSG_DATA client%d:%s\n", msg.client->IP,msg.data );
+			#endif
 			if (client_ptr->cb.recv_cb){
 				client_ptr->cb.recv_cb(NULL,NULL,NULL);
 			}
 		}
 
 		if(msg.flag==MSG_DISCONN){
+			#ifndef DEBUG_CLIENT_THREADS_recv
 			printk( "MSG_DISCONN client%d:%s\n", msg.client->IP,msg.data );
+			#endif
 			client_ptr->server=NULL;
 			if (client_ptr->cb.recv_cb){
 				client_ptr->cb.recv_cb(NULL,NULL,NULL);
@@ -29,7 +34,9 @@ void client_threads_recv(struct  client* client_ptr){
         //确认连接
        if(msg.flag==MSG_CONNECT&&msg.client==client_ptr)
        {
+       		#ifndef DEBUG_CLIENT_THREADS_recv
        	  printk( "\tCLIENT CONNECT INFO IP:%d\n",msg.server->port );
+       	  #endif
           client_ptr->server=msg.server;
           client_ptr->cb.connect_cb;
           return SUCCESS;
@@ -59,8 +66,9 @@ int client_init(	struct  client* client ,
 			recv_cb_t recv_cb,
 			send_cb_t send_cb,
 			close_cb_t close_cb){
+	#ifndef DEBUG_CLIENT_INIT
 	printk("enter client_init\n");  
-
+	#endif
 	client->server=NULL;
 
 	client->IP=client_IP;
@@ -80,7 +88,9 @@ int client_init(	struct  client* client ,
        
 int api_client_connect(int port,struct  client* client)
 {
+	#ifndef DEBUG_API_CILENT_CONNECT
 	printk("enter client_connnect :%d\n",client->server); 
+	#endif
 	struct server* server=first_server;
 
 	if(1)
@@ -101,8 +111,9 @@ int api_client_connect(int port,struct  client* client)
 	  
 	   }
 	   else{
+	   	#ifndef DEBUG_API_CILENT_CONNECT
 	   	  printk( "connect err\n" ); 
-
+	   	  #endif
 	      client->cb.connect_cb;
 	      return FAIL;//already connected
 	    }
@@ -114,8 +125,9 @@ int api_client_connect(int port,struct  client* client)
        
 int api_client_release(struct  client* client_ptr)
 {
+	#ifndef DEBUG_API_CILENT_RELEASE
 	printk("enter api_client_release\n" ); 
-
+	#endif
 	//如果client的server不为空，则证明client还有连接server，需要disconnect再释放	
 	if(client_ptr->server)
 	{
@@ -124,8 +136,9 @@ int api_client_release(struct  client* client_ptr)
 	 
 	//结束client的接收消息线程
 	k_thread_abort(&client_ptr->threads[0]);
+	#ifndef DEBUG_API_CILENT_RELEASE
 	printk("Client %d release\n",client_ptr->IP); 
-
+	#endif
 	return SUCCESS;
 }
 

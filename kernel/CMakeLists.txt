@@ -23,6 +23,8 @@ add_library(kernel
   version.c
   work_q.c
   smp.c
+  kk_primitive.c
+  k5_primitive.c
   )
 
 # Kernel files has the macro __ZEPHYR_SUPERVISOR__ set so that it

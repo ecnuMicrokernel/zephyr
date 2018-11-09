@@ -247,6 +247,9 @@ static inline void k_object_access_all_grant(void *object)
 }
 #endif /* !CONFIG_USERSPACE */
 
+/*esb 中斷陷入*/
+
+//__syscall void k_get_esb(void *param);
 /**
  * grant a thread access to a kernel object
  *

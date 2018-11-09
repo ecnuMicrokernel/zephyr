@@ -32,6 +32,10 @@
 #include <entropy.h>
 #include <logging/log_ctrl.h>
 
+/*设置ESB总线所需导入头文件*/
+#include <k5_esb.h>
+#include <irq_offload.h>
+
 /* kernel build timestamp items */
 #define BUILD_TIMESTAMP "BUILD: " __DATE__ " " __TIME__
 
@@ -71,15 +75,19 @@ u64_t __noinit __idle_time_stamp;  /* timestamp when CPU goes idle */
 
 #define IDLE_STACK_SIZE CONFIG_IDLE_STACK_SIZE
 #define MAIN_STACK_SIZE CONFIG_MAIN_STACK_SIZE
+#define  ESB_STACK_SIZE 8000 	 
 
 K_THREAD_STACK_DEFINE(_main_stack, MAIN_STACK_SIZE);
 K_THREAD_STACK_DEFINE(_idle_stack, IDLE_STACK_SIZE);
+K_THREAD_STACK_DEFINE(_esb_stack, ESB_STACK_SIZE);
 
 static struct k_thread _main_thread_s;
 static struct k_thread _idle_thread_s;
+static struct k_thread _esb_thread_s;
 
 k_tid_t const _main_thread = (k_tid_t)&_main_thread_s;
 k_tid_t const _idle_thread = (k_tid_t)&_idle_thread_s;
+k_tid_t const _esb_thread = (k_tid_t)&_esb_thread_s;
 
 /*
  * storage space for the interrupt stack
@@ -198,6 +206,144 @@ void _data_copy(void)
 }
 #endif
 
+
+/**
+ *@brief ESB server 
+ * 
+ *This routine waits for the esb and switches to the according system server
+ *
+ *@return N/A
+ */
+
+static int esb_server(){
+
+    printk("-----------------------------------\n开始执行 esb_server 线程\n-----------------------------------\n");
+   
+    tK5_esb esb;
+    memset(&esb,0,K5_ESB_PAGE );
+    tI4   ret = 0;  
+    tU4  service;
+    tU4  serv_num;
+    tK5_svc  *serv;
+    //tK5_ServiceType   *stg;  //服务组表(STG);
+    //tK5_ServiceVector *svc;  //服务向量表(SVC);
+    
+    
+    while(1){
+        ret=kk_wait(&esb,  NULL, 0, NULL);
+
+        if ( ret <= 0 || &esb == NULL ) 
+	      {
+	        printk("KK_ERR: kk_wait [%d]\n", ret);
+	        return  KK_ERR_WAIT;     //-2, 等待失败，推出程序？ 再试？
+	       };
+	    if ( esb.head >= K5_N1 && esb.body[0] != 0 ) 
+	      {
+          	//kk_switch_to (current, K5_NET_PROXY,esb ); //切到网络代理  
+		    continue;
+	      }; 
+	      service=esb.service;
+	      serv = (tK5_svc *)&service;  
+	      serv_num=serv->svc_type*16+ serv->svc_func;
+	    if ( serv->svc_space != 0 ) {		      //如果服务空间不是内核空间
+            // kk_switch_to ( current, K5_USER_PROXY，esb ); //切到用户代理 
+		    continue;
+	     };
+          // stg =(tK5_ServiceType*)&stg_tab[serv->type][0]; //查服务类组表
+
+         switch(serv_num)
+         {
+         	case thr_start :
+         	  {
+         	  	printk("调用创建线程服务\n");
+
+         	  	struct k_thread *my_thread=(struct k_thread *)esb.body[0];
+				char *thread_stack=(char *)esb.body[1];
+				int stacksize=(int)esb.body[2];
+				void *entry=(void *)esb.body[3];
+				void *param0=(void *)esb.body[4];
+				void *param1=(void *)esb.body[5];
+				void *param2=(void *)esb.body[6];
+				int prio=(int)esb.body[7];
+				u32_t options=(u32_t)esb.body[8];
+				s32_t delay=(s32_t)esb.body[9];
+
+				k_thread_create(my_thread,thread_stack,stacksize,entry,param0,param1,param2,prio,options,delay);
+
+				k_sleep(100);
+                
+                /*改变ESB的body数据*/
+
+                esb.body[510]=888;
+                printk("改变ESB的body[510]数据:%lld\n",esb.body[510]);
+
+                kk_reply(&esb,0,0,NULL);
+				
+				
+         	  	break;
+         	  }
+	        default: //未知系统服务
+		      {
+				 printk("K_ERR: Unknown service [%x]\n",serv_num );
+                 break; 	
+		      }  
+
+         }
+        k_sleep(100);
+    }
+}
+
+
+/**
+ *@brief ESB 的中断陷入服务函数
+ * 
+ *This routine waits for the esb and send the esb to the esb_server
+ *
+ *@return N/A
+ */
+void svc_trap(void *parame)
+{
+	
+  printk("陷入内核开始执行svc陷入后的中断例程\n");
+  
+  /*若不改变寄存器control[0]的值,异常返回后回到产生异常之前的特权级,
+    也可以改写control[0]的值,来改写退出异常处理事件后的权限级别,变成用户级.
+  */
+  	int ipsr,control,param;
+     __asm__ volatile(
+      "mov %[param],r12\n\t" \
+      "mrs %[ipsr], ipsr\n\t" \
+      "mrs %[control], control\n\t"
+
+      : [param]"=r"(param),[ipsr] "=r" (ipsr),[control] "=r" (control)
+    );
+   
+    printk("由寄存器取得ESB帧结构的地址\n");
+   // while(esb_bus==NULL){
+    	esb_bus=(tK5_esb *)param;
+    //	break;
+  //  }
+    
+    printk("----------------------------------------------\n中断处理函数中的工作模式和权限级别相关寄存器值\n");
+    printk("ipsr:%d\ncontrol:%d\n",ipsr,control);
+
+    
+    /*通过消息队列传送ESB帧结构到ESB_server线程中*/
+    // k_msgq_put(&my_msgq,esb_bus,K_NO_WAIT);
+    // for(int i=0;i<511;i++){
+    // 	k_msgq_put(&my_msgq,&esb_bus->body[i],K_NO_WAIT);
+    // }
+
+    // int num=k_msgq_num_used_get(&my_msgq);
+    // printk("--------------------------------------------------------\n将ESB帧结构数据传入消息队列(设置8字节为队列里一组数据):\n");
+    // printk("传入后消息队列中数据组数:%d\n",num);
+    
+	return;
+	
+}
+
+
+
 /**
  *
  * @brief Mainline for kernel's background thread
@@ -248,9 +394,29 @@ static void bg_thread_main(void *unused1, void *unused2, void *unused3)
 	__main_time_stamp = (u64_t)k_cycle_get_32();
 #endif
 
+    
+
+    /*ESB:开启esb_server线程*/
+ 	 _setup_new_thread(_esb_thread, _esb_stack,
+			  ESB_STACK_SIZE, esb_server,
+			  NULL, NULL, NULL,
+			  1, K_NO_WAIT);
+	_mark_thread_as_started(_esb_thread);
+	_ready_thread(_esb_thread);  
+
+    /*ESB:初始化esb_server线程与主线程的通信消息队列*/  
+	//k_msgq_init(&my_msgq,msgq_buf,8,512);
+	k_msgq_init(&my_msgq_back,msgq_buf_back,8,512);
+
+
+     /*ESB:设置中断处理函数*/
+    offload_routine = svc_trap;
+
+    
 	extern void main(void);
 
 	main();
+
 
 	/* Terminate thread normally since it has no more work to do */
 	_main_thread->base.user_options &= ~K_ESSENTIAL;
@@ -441,6 +607,7 @@ extern uintptr_t __stack_chk_guard;
  *
  * @return Does not return
  */
+
 FUNC_NORETURN void _Cstart(void)
 {
 #ifdef CONFIG_MULTITHREADING
@@ -480,22 +647,31 @@ FUNC_NORETURN void _Cstart(void)
 #ifdef CONFIG_STACK_CANARIES
 	__stack_chk_guard = z_early_boot_rand32_get();
 #endif
+   
 
 #ifdef CONFIG_MULTITHREADING
-	prepare_multithreading(dummy_thread);
+ 	prepare_multithreading(dummy_thread);
+
 	switch_to_main_thread();
+
+
 #else
+	
 	bg_thread_main(NULL, NULL, NULL);
 
 	while (1) {
 	}
 #endif
+     
 
 	/*
 	 * Compiler can't tell that the above routines won't return and issues
 	 * a warning unless we explicitly tell it that control never gets this
 	 * far.
 	 */
+
+ /*start esb_server thread*/
+   
 
 	CODE_UNREACHABLE;
 }

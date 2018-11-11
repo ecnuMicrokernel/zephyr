@@ -41,20 +41,20 @@ if ( from != NULL )                    //为空表示等待任意地址端口
 // 直接切换到相应的服务线程!!!!!
 //kk_switch_to ( esb, current, next );
 
-// while(k_msgq_get(&my_msgq,esb,K_FOREVER)==0){
-//    for(j=0;j<511;j++){
-//    k_msgq_get(&my_msgq,&esb->body[j],K_FOREVER);
-//    }
-//   int num=k_msgq_num_used_get(&my_msgq);
-// 	printk("从消息队列中取出ESB帧结构数据\n");
-// 	printk("取出后消息队列里数据组数:%d\n",num);
-while(esb_bus!=NULL){
-	memcpy(esb,esb_bus,sizeof(tK5_esb));
+while(k_msgq_get(&my_msgq,esb,K_FOREVER)==0){
+   for(j=0;j<511;j++){
+   k_msgq_get(&my_msgq,&esb->body[j],K_FOREVER);
+   }
+  int num=k_msgq_num_used_get(&my_msgq);
+	printk("从消息队列中取出ESB帧结构数据\n");
+	printk("取出后消息队列里数据组数:%d\n",num);
+// while(esb_bus!=NULL){
+// 	memcpy(esb,esb_bus,sizeof(tK5_esb));
 	tU4 service=esb->service;
 	tK5_svc  *svc=(tK5_svc *)&service;  
 	printk("传到esb_bus_server中的param:\nservice服务号:%d\n",svc->svc_type*16+svc->svc_func);
 	printk("body[0](address):%lld\nbody[510]:%lld\n",esb->body[0],esb->body[510]);
-  esb_bus=NULL;
+ // esb_bus=NULL;
   break;
 }
 

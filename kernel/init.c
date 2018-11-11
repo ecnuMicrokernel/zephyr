@@ -220,7 +220,7 @@ static int esb_server(){
     printk("-----------------------------------\n开始执行 esb_server 线程\n-----------------------------------\n");
    
     tK5_esb esb;
-    memset(&esb,0,K5_ESB_PAGE );
+    //memset(&esb,0,K5_ESB_PAGE );
     tI4   ret = 0;  
     tU4  service;
     tU4  serv_num;
@@ -319,24 +319,22 @@ void svc_trap(void *parame)
     );
    
     printk("由寄存器取得ESB帧结构的地址\n");
-   // while(esb_bus==NULL){
-    	esb_bus=(tK5_esb *)param;
-    //	break;
-  //  }
-    
+  
+    esb_bus=(tK5_esb *)param;
+ 
     printk("----------------------------------------------\n中断处理函数中的工作模式和权限级别相关寄存器值\n");
     printk("ipsr:%d\ncontrol:%d\n",ipsr,control);
 
     
     /*通过消息队列传送ESB帧结构到ESB_server线程中*/
-    // k_msgq_put(&my_msgq,esb_bus,K_NO_WAIT);
-    // for(int i=0;i<511;i++){
-    // 	k_msgq_put(&my_msgq,&esb_bus->body[i],K_NO_WAIT);
-    // }
+    k_msgq_put(&my_msgq,esb_bus,K_NO_WAIT);
+    for(int i=0;i<511;i++){
+    	k_msgq_put(&my_msgq,&esb_bus->body[i],K_NO_WAIT);
+    }
 
-    // int num=k_msgq_num_used_get(&my_msgq);
-    // printk("--------------------------------------------------------\n将ESB帧结构数据传入消息队列(设置8字节为队列里一组数据):\n");
-    // printk("传入后消息队列中数据组数:%d\n",num);
+    int num=k_msgq_num_used_get(&my_msgq);
+    printk("--------------------------------------------------------\n将ESB帧结构数据传入消息队列(设置8字节为队列里一组数据):\n");
+    printk("传入后消息队列中数据组数:%d\n",num);
     
 	return;
 	
@@ -405,7 +403,7 @@ static void bg_thread_main(void *unused1, void *unused2, void *unused3)
 	_ready_thread(_esb_thread);  
 
     /*ESB:初始化esb_server线程与主线程的通信消息队列*/  
-	//k_msgq_init(&my_msgq,msgq_buf,8,512);
+	k_msgq_init(&my_msgq,msgq_buf,8,512);
 	k_msgq_init(&my_msgq_back,msgq_buf_back,8,512);
 
 

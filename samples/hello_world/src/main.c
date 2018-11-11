@@ -70,7 +70,8 @@ void main(void)
 
   printk("-----------------------------------\n调用ESB通信原语\n");
   k5_call(&esb,service,&to,sizeof(buffer),buffer);
-  
+  serv->svc_func=0;
+  k5_call(&esb,service,&to,0,NULL);
 
 
   printk("-----------------------------------\n返回线程模式后的相关寄存器值\n");

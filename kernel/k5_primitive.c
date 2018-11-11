@@ -69,14 +69,17 @@ __asm__ volatile (
                   :
                   : [id] "i" (1),[esb]"X"(esb)
                   : "memory");
-
-for(int n=0;n<512;n++){
-  if(n==0){k_msgq_get(&my_msgq_back,esb,K_FOREVER);}
-  k_msgq_get(&my_msgq_back,&esb->body[n-1],K_FOREVER);
-}
-int num=k_msgq_num_used_get(&my_msgq_back);
-printk("-------------------------\n取出后消息队列里数据组数:%d\n",num);
-printk("得到传回的数据:%lld\n",esb->body[510]);
+int esb1;
+k_msgq_get(&my_msgq_back,&esb1,K_FOREVER);
+memcpy(esb,(tK5_esb *)esb1,sizeof(tK5_esb));
+// for(int n=0;n<512;n++){
+//   if(n==0){k_msgq_get(&my_msgq_back,esb,K_FOREVER);}
+//   k_msgq_get(&my_msgq_back,&esb->body[n-1],K_FOREVER);
+// }
+// int num=k_msgq_num_used_get(&my_msgq_back);
+// printk("-------------------------\n取出后消息队列里数据组数:%d\n",num);
+printk("-----------------------------------\n取出传回消息队列里ESB帧结构地址\n");
+printk("得到传回的数据esb->body[510]:%lld\n",esb->body[510]);
 
 
      
@@ -90,3 +93,56 @@ if (svc->svc_inout==0 && c_len>=esb->size && c_buf!=NULL)
 else return (1) ;                        //否则返回1，内容在ESB中
 
 }
+
+
+//-------------------------------------------------------------------------
+//同步等待接收原语（原RS)，等待接收服务请求或服务确认;
+//-------------------------------------------------------------------------
+
+tU4  k5_wait  ( 
+     tK5_esb       *esb,  //ESB总线数据结构，2018-10-03修改加*；
+     tK5_net      *from,  //指定期望的端口号及网络地址 
+     tU4          w_len,  //接收缓冲区长度，使用零拷贝时不用
+     tU4         *w_buf   //接收缓冲区地址，使用零拷贝时不用
+     ) 
+{
+
+if ( esb == NULL  )  return ( -1 );
+
+memset(esb, 0, K5_ESB_PAGE); //清零ESB帧结构,整页
+
+esb->primitive = K5_WAIT;              //设置服务原语
+tK5_ehn  ehn; 
+tU1      i, j;   
+if ( from != NULL )                    //为空表示等待任意地址端口
+{
+     esb->head      = from->net_level;   //设置帧扩展长度
+     esb->src_port  = from->src_port;    //设置等待特定源端口
+
+     if (from->net_level >= K5_N1 && from->net_level <= K5_N6 ) 
+     {
+        for( i=0, j=0; i<6; i++,j++) 
+        {   
+           ehn.src_addr = from->hn[i].src_addr; //设置等待第i级网络源地址
+           memcpy(&esb->body[j], &ehn ,sizeof(tU8));           //cast映射到body[j]
+        }; //结束for 
+     };    //结束if to
+};         //结束if from
+
+// 已经准备好ESB帧头和帧体，可以通过软中断陷入内核了!!!!!!
+// 以下与处理器架构密切相关，由各家自行实现！此处仅示意！
+
+  
+
+
+
+
+
+                                             //2018-10-03增加并修改
+if (w_len>=esb->size && w_buf!=NULL )       //若指定缓冲区且足够大
+   {
+    memcpy (w_buf,esb ,esb->size);  //则连头拷贝到用户缓冲区
+    return (esb->size);                      //给用户返回接收到帧长
+    } else return (1) ;                      //否则返回1，内容在ESB中
+
+};   //end of k5_wait

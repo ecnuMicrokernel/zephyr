@@ -75,19 +75,23 @@ u64_t __noinit __idle_time_stamp;  /* timestamp when CPU goes idle */
 
 #define IDLE_STACK_SIZE CONFIG_IDLE_STACK_SIZE
 #define MAIN_STACK_SIZE CONFIG_MAIN_STACK_SIZE
-#define  ESB_STACK_SIZE 8000 	 
+#define  ESB_STACK_SIZE 8000 
+//#define  APP_STACK_SIZE 6000 	 
 
 K_THREAD_STACK_DEFINE(_main_stack, MAIN_STACK_SIZE);
 K_THREAD_STACK_DEFINE(_idle_stack, IDLE_STACK_SIZE);
 K_THREAD_STACK_DEFINE(_esb_stack, ESB_STACK_SIZE);
+//K_THREAD_STACK_DEFINE(_app_stack, APP_STACK_SIZE);
 
 static struct k_thread _main_thread_s;
 static struct k_thread _idle_thread_s;
 static struct k_thread _esb_thread_s;
+//static struct k_thread _app_thread_s;
 
 k_tid_t const _main_thread = (k_tid_t)&_main_thread_s;
 k_tid_t const _idle_thread = (k_tid_t)&_idle_thread_s;
 k_tid_t const _esb_thread = (k_tid_t)&_esb_thread_s;
+//k_tid_t const _app_thread = (k_tid_t)&_app_thread_s;
 
 /*
  * storage space for the interrupt stack
@@ -208,7 +212,7 @@ void _data_copy(void)
 
 
 /**
- *@brief ESB server 
+ *@brief ESB server
  * 
  *This routine waits for the esb and switches to the according system server
  *
@@ -220,14 +224,13 @@ static int esb_server(){
     printk("-----------------------------------\n开始执行 esb_server 线程\n-----------------------------------\n");
    
     tK5_esb esb;
-    //memset(&esb,0,K5_ESB_PAGE );
     tI4   ret = 0;  
     tU4  service;
     tU4  serv_num;
     tK5_svc  *serv;
     //tK5_ServiceType   *stg;  //服务组表(STG);
     //tK5_ServiceVector *svc;  //服务向量表(SVC);
-    
+    kk_test();
     
     while(1){
         ret=kk_wait(&esb,  NULL, 0, NULL);
@@ -249,11 +252,10 @@ static int esb_server(){
             // kk_switch_to ( current, K5_USER_PROXY，esb ); //切到用户代理 
 		    continue;
 	     };
-          // stg =(tK5_ServiceType*)&stg_tab[serv->type][0]; //查服务类组表
-
+          // stg =(tK5_ServiceType*)&stg_tab[serv->type][0]; //
          switch(serv_num)
          {
-         	case thr_start :
+         	case thr_start  :
          	  {
          	  	printk("调用创建线程服务\n");
 
@@ -271,10 +273,11 @@ static int esb_server(){
 				k_thread_create(my_thread,thread_stack,stacksize,entry,param0,param1,param2,prio,options,delay);
 
 				k_sleep(100);
+
                 
                 /*改变ESB的body数据*/
 
-                esb.body[510]=888;
+                esb.body[510]=666;
                 printk("改变ESB的body[510]数据:%lld\n",esb.body[510]);
 
                 kk_reply(&esb,0,0,NULL);
@@ -286,11 +289,15 @@ static int esb_server(){
 		      {
 				 printk("K_ERR: Unknown service [%x]\n",serv_num );
                  break; 	
-		      }  
+		      }  //结束default
 
          }
+        //esb_bus=0;
+        //memset(&esb,0,K5_ESB_PAGE );
         k_sleep(100);
     }
+ 
+       
 }
 
 
@@ -320,25 +327,25 @@ void svc_trap(void *parame)
    
     printk("由寄存器取得ESB帧结构的地址\n");
   
-    esb_bus=(tK5_esb *)param;
+    //esb_bus=(tK5_esb *)param;
  
     printk("----------------------------------------------\n中断处理函数中的工作模式和权限级别相关寄存器值\n");
     printk("ipsr:%d\ncontrol:%d\n",ipsr,control);
 
-    
+    printk("通过消息队列传送ESB帧结构地址到ESB_server线程中\n");
     /*通过消息队列传送ESB帧结构到ESB_server线程中*/
-    k_msgq_put(&my_msgq,esb_bus,K_NO_WAIT);
-    for(int i=0;i<511;i++){
-    	k_msgq_put(&my_msgq,&esb_bus->body[i],K_NO_WAIT);
-    }
+    k_msgq_put(&my_msgq,&param,K_NO_WAIT);
+     
 
-    int num=k_msgq_num_used_get(&my_msgq);
-    printk("--------------------------------------------------------\n将ESB帧结构数据传入消息队列(设置8字节为队列里一组数据):\n");
-    printk("传入后消息队列中数据组数:%d\n",num);
+    // int num=k_msgq_num_used_get(&my_msgq);
+    // printk("将ESB帧结构数据传入消息队列 :\n");
+    // printk("传入后消息队列中数据组数:%d\n",num);
+    
     
 	return;
 	
 }
+
 
 
 
@@ -392,7 +399,6 @@ static void bg_thread_main(void *unused1, void *unused2, void *unused3)
 	__main_time_stamp = (u64_t)k_cycle_get_32();
 #endif
 
-    
 
     /*ESB:开启esb_server线程*/
  	 _setup_new_thread(_esb_thread, _esb_stack,
@@ -403,10 +409,9 @@ static void bg_thread_main(void *unused1, void *unused2, void *unused3)
 	_ready_thread(_esb_thread);  
 
     /*ESB:初始化esb_server线程与主线程的通信消息队列*/  
-	k_msgq_init(&my_msgq,msgq_buf,8,512);
-	k_msgq_init(&my_msgq_back,msgq_buf_back,8,512);
-
-
+	k_msgq_init(&my_msgq,msgq_buf,4,1);
+	k_msgq_init(&my_msgq_back,msgq_buf_back,4,1);
+    
      /*ESB:设置中断处理函数*/
     offload_routine = svc_trap;
 
@@ -414,7 +419,12 @@ static void bg_thread_main(void *unused1, void *unused2, void *unused3)
 	extern void main(void);
 
 	main();
-
+	// _setup_new_thread(_app_thread, _app_stack,
+	// 		  APP_STACK_SIZE, main,
+	// 		  NULL, NULL, NULL,
+	// 		  K_USER, K_NO_WAIT);
+	// _mark_thread_as_started(_app_thread);
+	// _ready_thread(_app_thread); 
 
 	/* Terminate thread normally since it has no more work to do */
 	_main_thread->base.user_options &= ~K_ESSENTIAL;

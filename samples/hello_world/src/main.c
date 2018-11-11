@@ -17,8 +17,8 @@ void test(void)
 
 void main(void)
 {
-	
-	printk("-----------------------------------\nARCH: %s\n", CONFIG_ARCH);
+  
+  printk("-----------------------------------\nARCH: %s\n", CONFIG_ARCH);
 
   printk("-----------------------------------\n用户线程模式和权限级别相关寄存器值\n");
   int ipsr,control;
@@ -71,9 +71,9 @@ void main(void)
   printk("-----------------------------------\n调用ESB通信原语\n");
   k5_call(&esb,service,&to,sizeof(buffer),buffer);
   serv->svc_func=0;
-  k5_call(&esb,service,&to,0,NULL);
-
-
+  tK5_esb     esb1;
+  //k5_call(&esb1,service,&to,0,NULL);
+ 
   printk("-----------------------------------\n返回线程模式后的相关寄存器值\n");
   __asm__ volatile(
     "mrs %[ipsr], ipsr\n\t" \
@@ -83,7 +83,8 @@ void main(void)
   printk("ipsr:%d\ncontrol:%x\n",ipsr,control);
 
 
-	printk("用户应用结束!!\n");
+  printk("用户应用结束!!\n");
+
 
 }
 

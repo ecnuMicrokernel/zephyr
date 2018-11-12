@@ -72,7 +72,10 @@ void main(void)
   k5_call(&esb,service,&to,sizeof(buffer),buffer);
   serv->svc_func=0;
   tK5_esb     esb1;
-  //k5_call(&esb1,service,&to,0,NULL);
+  k5_call(&esb1,service,&to,0,NULL);
+
+
+
  
   printk("-----------------------------------\n返回线程模式后的相关寄存器值\n");
   __asm__ volatile(

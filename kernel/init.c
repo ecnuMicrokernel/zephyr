@@ -211,6 +211,55 @@ void _data_copy(void)
 #endif
 
 
+
+/**
+ *@brief kernel server search
+ * 
+ *This routine search and do the system server according to the server number in the ESB.
+ *
+ *@return N/A
+ */
+static void search_server_num(tU4  serv_num,tK5_esb *esb){
+    switch(serv_num)
+	 {
+	 	case thr_start  :
+	 	  {
+	 	  	printk("调用创建线程服务\n");
+
+	 	  	struct k_thread *my_thread=(struct k_thread *)esb->body[0];
+			char *thread_stack=(char *)esb->body[1];
+			int stacksize=(int)esb->body[2];
+			void *entry=(void *)esb->body[3];
+			void *param0=(void *)esb->body[4];
+			void *param1=(void *)esb->body[5];
+			void *param2=(void *)esb->body[6];
+			int prio=(int)esb->body[7];
+			u32_t options=(u32_t)esb->body[8];
+			s32_t delay=(s32_t)esb->body[9];
+
+			k_thread_create(my_thread,thread_stack,stacksize,entry,param0,param1,param2,prio,options,delay);
+			k_sleep(100);
+	        
+	        /*改变ESB的body数据*/
+
+	        esb->body[510]=666;
+	        printk("改变ESB的body[510]数据:%lld\n",esb->body[510]);
+
+	        kk_reply(esb,0,0,NULL);
+			
+	 	  	break;
+	 	  }
+	    default: //未知系统服务
+	      {
+			 printk("K_ERR: Unknown service [%x]\n",serv_num );
+	         break; 	
+	      }  //结束default
+
+	 }//结束查找服务向量表
+}
+
+
+
 /**
  *@brief ESB server
  * 
@@ -218,7 +267,6 @@ void _data_copy(void)
  *
  *@return N/A
  */
-
 static int esb_server(){
 
     printk("-----------------------------------\n开始执行 esb_server 线程\n-----------------------------------\n");
@@ -230,7 +278,7 @@ static int esb_server(){
     tK5_svc  *serv;
     //tK5_ServiceType   *stg;  //服务组表(STG);
     //tK5_ServiceVector *svc;  //服务向量表(SVC);
-    kk_test();
+    //kk_test();
     
     while(1){
         ret=kk_wait(&esb,  NULL, 0, NULL);
@@ -253,45 +301,19 @@ static int esb_server(){
 		    continue;
 	     };
           // stg =(tK5_ServiceType*)&stg_tab[serv->type][0]; //
-         switch(serv_num)
-         {
-         	case thr_start  :
-         	  {
-         	  	printk("调用创建线程服务\n");
+	       switch ( esb.primitive )     //服务原语分支转移
+		{
+			case K5_CALL:{
+				search_server_num(serv_num,&esb);//查找服务向量表,调用系统服务
+			}//结束K5_CALL原语分支
+	        case K5_WAIT:{
+	        	//kk_wait  ,do ,kk_reply
+	        	//break;
+	        	//_arch_switch_to_main_thread;
+	        }
+	    }//结束选择服务原语
 
-         	  	struct k_thread *my_thread=(struct k_thread *)esb.body[0];
-				char *thread_stack=(char *)esb.body[1];
-				int stacksize=(int)esb.body[2];
-				void *entry=(void *)esb.body[3];
-				void *param0=(void *)esb.body[4];
-				void *param1=(void *)esb.body[5];
-				void *param2=(void *)esb.body[6];
-				int prio=(int)esb.body[7];
-				u32_t options=(u32_t)esb.body[8];
-				s32_t delay=(s32_t)esb.body[9];
 
-				k_thread_create(my_thread,thread_stack,stacksize,entry,param0,param1,param2,prio,options,delay);
-
-				k_sleep(100);
-
-                
-                /*改变ESB的body数据*/
-
-                esb.body[510]=666;
-                printk("改变ESB的body[510]数据:%lld\n",esb.body[510]);
-
-                kk_reply(&esb,0,0,NULL);
-				
-				
-         	  	break;
-         	  }
-	        default: //未知系统服务
-		      {
-				 printk("K_ERR: Unknown service [%x]\n",serv_num );
-                 break; 	
-		      }  //结束default
-
-         }
         //esb_bus=0;
         //memset(&esb,0,K5_ESB_PAGE );
         k_sleep(100);
@@ -340,8 +362,7 @@ void svc_trap(void *parame)
     // int num=k_msgq_num_used_get(&my_msgq);
     // printk("将ESB帧结构数据传入消息队列 :\n");
     // printk("传入后消息队列中数据组数:%d\n",num);
-    
-    
+        
 	return;
 	
 }
@@ -410,7 +431,7 @@ static void bg_thread_main(void *unused1, void *unused2, void *unused3)
 
     /*ESB:初始化esb_server线程与主线程的通信消息队列*/  
 	k_msgq_init(&my_msgq,msgq_buf,4,1);
-	k_msgq_init(&my_msgq_back,msgq_buf_back,4,1);
+	k_msgq_init(&my_msgq_callback,msgq_buf_callback,4,1);
     
      /*ESB:设置中断处理函数*/
     offload_routine = svc_trap;

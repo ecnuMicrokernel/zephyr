@@ -24,7 +24,7 @@
 #define PRIORITY 7
 
 /* delay between greetings (in ms) */
-#define SLEEPTIME 500
+#define SLEEPTIME 50000000
 
 
 /*
@@ -62,7 +62,7 @@ void threadB(void *dummy1, void *dummy2, void *dummy3)
 	ARG_UNUSED(dummy2);
 	ARG_UNUSED(dummy3);
 
-	/* invoke routine to ping-pong hello messages with threadA */
+	 // invoke routine to ping-pong hello messages with threadA 
 	helloLoop(__func__, &threadB_sem, &threadA_sem);
 }
 
@@ -88,3 +88,9 @@ void threadA(void *dummy1, void *dummy2, void *dummy3)
 
 K_THREAD_DEFINE(threadA_id, STACKSIZE, threadA, NULL, NULL, NULL,
 		PRIORITY, 0, K_NO_WAIT);
+
+void thread1(){
+	printk("hello,thread1\n");
+	k_thread_suspend();
+	printk("sleep forver\n");
+}

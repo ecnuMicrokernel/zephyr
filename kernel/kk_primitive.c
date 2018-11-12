@@ -57,7 +57,7 @@ while(k_msgq_get(&my_msgq,&param,K_FOREVER)==0){
 	tU4 service=esb->service;
 	tK5_svc  *svc=(tK5_svc *)&service;  
 	printk("传到esb_bus_server中的param:\nservice服务号:%d\n",svc->svc_type*16+svc->svc_func);
-	printk("body[0](address):%lld\nbody[510]:%lld\n",esb->body[0],esb->body[510]);
+	printk("body[0]:%lld\nbody[510]:%lld\n",esb->body[0],esb->body[510]);
 
   break;
 }
@@ -103,13 +103,13 @@ if (s_len > 0 && s_buf != NULL )  //若有服务结果数据送回
 // 直接切换到相应的服务线程!!!!!
 //kk_switch_to ( esb, current, next );
   // for(int j=0;j<512;j++){
-  //     if(j==0){k_msgq_put(&my_msgq_back,esb,K_NO_WAIT);}
-  //       k_msgq_put(&my_msgq_back,&esb->body[j-1],K_NO_WAIT);
+  //     if(j==0){k_msgq_put(&my_msgq_callback,esb,K_NO_WAIT);}
+  //       k_msgq_put(&my_msgq_callback,&esb->body[j-1],K_NO_WAIT);
   //   }
     printk("将传回的ESB帧地址放入传回消息队列里\n");
     int param=(int)esb;
-    k_msgq_put(&my_msgq_back,&param,K_NO_WAIT);
-    // int num=k_msgq_num_used_get(&my_msgq_back);
+    k_msgq_put(&my_msgq_callback,&param,K_NO_WAIT);
+    // int num=k_msgq_num_used_get(&my_msgq_callback);
     // printk("傳回消息队列里数据组数:%d\n",num);
 
    

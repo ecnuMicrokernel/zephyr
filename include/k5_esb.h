@@ -645,7 +645,8 @@ typedef struct {
 #include <kernel.h>
 //tK5_esb *esb_bus;
 struct k_msgq my_msgq;
-char __aligned(4) msgq_buf[8*1000];
-
-struct k_msgq my_msgq_back;
-char __aligned(4) msgq_buf_back[8*1000];
+char __aligned(4) msgq_buf[8*500];
+struct k_msgq my_msgq_callback;
+char __aligned(4) msgq_buf_callback[8*500];
+// struct k_msgq my_msgq_waitback;
+// char __aligned(4) msgq_buf_waitback[8*500];

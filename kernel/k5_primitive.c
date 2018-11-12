@@ -70,7 +70,7 @@ __asm__ volatile (
                   : [id] "i" (1),[esb]"X"(esb)
                   : "memory");
 int esb1;
-k_msgq_get(&my_msgq_back,&esb1,K_FOREVER);
+k_msgq_get(&my_msgq_callback,&esb1,K_FOREVER);
 memcpy(esb,(tK5_esb *)esb1,sizeof(tK5_esb));
 // for(int n=0;n<512;n++){
 //   if(n==0){k_msgq_get(&my_msgq_back,esb,K_FOREVER);}
@@ -132,9 +132,12 @@ if ( from != NULL )                    //为空表示等待任意地址端口
 // 已经准备好ESB帧头和帧体，可以通过软中断陷入内核了!!!!!!
 // 以下与处理器架构密切相关，由各家自行实现！此处仅示意！
 
-  
-
-
+__asm__ volatile (
+                  "mov r12 ,%[esb]\n\t" \   
+                  "svc %[id]"             
+                  :
+                  : [id] "i" (1),[esb]"X"(esb)
+                  : "memory");
 
 
 

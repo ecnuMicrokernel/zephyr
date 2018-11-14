@@ -245,7 +245,7 @@ tU4  k5_wait  (       //4个参数，不需要等待特定服务编码 ；
 //用户异步应答原语（原SA，ack+nak)，确认服务请求，返回服务结果，然后继续等待;
 tU4  k5_reply  (     //4个参数，原路返回，不需要地址；
      tK5_esb  *esb,  //ESB总线帧数据结构（改为第1个参数）
-     tI2   ack_err,  //正值时为确认序列号，负值表示错误编号；
+     tU2   ack_err,  //正值时为确认序列号，负值表示错误编号；
      tU4     s_len,  //发送缓冲区长度,按8字节计，含帧头；
      tU4    *s_buf   //发送缓冲区地址,带服务结果数据；
 ); 
@@ -635,18 +635,17 @@ typedef struct {
 
 
 
-
-
-
 //-----------------------------------------------------------------
 // 传输ESB帧结构的消息队列定义
 //-----------------------------------------------------------------
 #include <toolchain.h>
 #include <kernel.h>
-//tK5_esb *esb_bus;
 struct k_msgq my_msgq;
 char __aligned(4) msgq_buf[8*500];
 struct k_msgq my_msgq_callback;
 char __aligned(4) msgq_buf_callback[8*500];
 // struct k_msgq my_msgq_waitback;
 // char __aligned(4) msgq_buf_waitback[8*500];
+/*zephyr此应用情况下写在这里,有用户模式情况下应该都知道通信间线程相互的id*/
+struct k_thread client;
+struct k_thread server;

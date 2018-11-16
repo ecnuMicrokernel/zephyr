@@ -187,7 +187,8 @@ config ERRNO
 	  _get_errno() symbol.
 
 config APPLICATION_MEMORY
-	bool
+    bool
+	default y
 	prompt "Split kernel and application memory"
 	help
 	  For all read-write memory sections (namely bss, noinit, data),

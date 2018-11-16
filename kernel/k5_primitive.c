@@ -24,7 +24,7 @@ int svc_num=svc->svc_type*16+svc->svc_func;
 if ( svc_num <= 0 || svc_num > K5_LAST_SVC  )  return ( -1 );
 if ( esb == NULL  || to == NULL         )  return ( -2 );
 
- memset(esb, 0, K5_ESB_PAGE);  //清零ESB帧结构,整页
+ memset(esb, 0, K5_MAX_BUF);  //清零ESB帧结构,整页
 
  esb->primitive = K5_CALL;              //设置服务原语
  esb->service   = service;              //设置服务编码
@@ -69,14 +69,8 @@ __asm__ volatile (
 int esb1;
 k_msgq_get(&my_msgq_callback,&esb1,K_FOREVER);
 memcpy(esb,(tK5_esb *)esb1,sizeof(tK5_esb));
-// for(int n=0;n<512;n++){
-//   if(n==0){k_msgq_get(&my_msgq_back,esb,K_FOREVER);}
-//   k_msgq_get(&my_msgq_back,&esb->body[n-1],K_FOREVER);
-// }
-// int num=k_msgq_num_used_get(&my_msgq_back);
-// printk("-------------------------\n取出后消息队列里数据组数:%d\n",num);
 printk("-----------------------------------\n取出传回消息队列里ESB帧结构地址\n");
-printk("得到传回的数据esb->body[510]:%lld\n",esb->body[510]);
+
 
 
      
@@ -105,7 +99,7 @@ tU4  k5_wait  (
 
 if ( esb == NULL  )  return ( -1 );
 
-memset(esb, 0, K5_ESB_PAGE); //清零ESB帧结构,整页
+memset(esb, 0, K5_MAX_BUF); //清零ESB帧结构,整页
 
 esb->primitive = K5_WAIT;              //设置服务原语
 tK5_ehn  ehn; 
@@ -138,7 +132,6 @@ int esb1;
 k_msgq_get(&my_msgq_callback,&esb1,K_FOREVER);
 memcpy(esb,(tK5_esb *)esb1,sizeof(tK5_esb));
 printk("-----------------------------------\n取出传回消息队列里ESB帧结构地址\n");
-printk("k5_wait得到传回的数据esb->body[510]:%lld\n",esb->body[510]);
 
                            
 if (w_len>=esb->size && w_buf!=NULL )       //若指定缓冲区且足够大
@@ -171,13 +164,6 @@ esb->head = K5_H1;                 //设置扩展头部H1
 eh1 = (tK5_eh1 *)&esb->body[0];  //获取并展开扩展头部
 eh1->ack_seq == ack_err;  //确认已收到的帧序号
 memcpy(&esb->body[0],eh1,sizeof(tU8));       //设置扩展头部 
-// if(eh1->ack_seq == ack_err) 
-// {      
-//    memcpy(&esb->body[0],eh1,sizeof(tU8));     }       
-// else
-// {
-//   return -1;
-// }
 
 if (s_len > 0 && s_buf != NULL )  //若有服务结果数据送回
 {
@@ -219,7 +205,7 @@ int svc_num=svc->svc_type*16+svc->svc_func;
 if ( svc_num <= 0 || svc_num > K5_LAST_SVC  )  return ( -1 );
 if ( esb == NULL  || to == NULL         )  return ( -2 );
 
- memset(esb, 0, K5_ESB_PAGE);  //清零ESB帧结构,整页
+ memset(esb, 0, K5_MAX_BUF);  //清零ESB帧结构,整页
 
  esb->primitive = K5_SEND;              //设置服务原语
  esb->service   = service;              //设置服务编码

@@ -2,11 +2,6 @@
 #include <string.h>
 #include <misc/printk.h>
 
-
-void kk_test(void){
-  printk("hello esb\n");
-}
-
 //-------------------------------------------------------------------------
 //同步等待接收原语（原RS)，等待接收服务请求或服务确认;
 //-------------------------------------------------------------------------
@@ -21,7 +16,7 @@ tU4  kk_wait  (
 
 if ( esb == NULL  )  return ( -1 );
 
-memset(esb,0,K5_ESB_PAGE);   //清零ESB帧结构,整页
+memset(esb,0,K5_MAX_BUF);   //清零ESB帧结构,整页
 
 esb->primitive = K5_WAIT;              //设置服务原语
 int i,j;
@@ -49,12 +44,11 @@ if ( from != NULL )                    //为空表示等待任意地址端口
 //kk_switch_to ( esb, current, next );
 int param;
 while(k_msgq_get(&my_msgq,&param,K_FOREVER)==0){
-  printk("从消息队列中取出ESB帧结构数据地址并拷贝至esb_server中\n");
   memcpy(esb,(tK5_esb *)param,sizeof(tK5_esb));
 	tU4 service=esb->service;
 	tK5_svc  *svc=(tK5_svc *)&service;  
-	printk("传到esb_bus_server中的param:\nservice服务号:%d\n",svc->svc_type*16+svc->svc_func);
-	printk("body[0]:%lld\nbody[510]:%lld\n",esb->body[0],esb->body[510]);
+	printk("传到esb_bus_server中的esb的param:\nservice服务号:%d\n",svc->svc_type*16+svc->svc_func);
+	printk("body[0]:%lld\n",esb->body[0]);
 
   break;
 }
@@ -100,15 +94,9 @@ if (s_len > 0 && s_buf != NULL )  //若有服务结果数据送回
 
 // 直接切换到相应的服务线程!!!!!
 //kk_switch_to ( esb, current, next );
-  // for(int j=0;j<512;j++){
-  //     if(j==0){k_msgq_put(&my_msgq_callback,esb,K_NO_WAIT);}
-  //       k_msgq_put(&my_msgq_callback,&esb->body[j-1],K_NO_WAIT);
-  //   }
     printk("将传回的ESB帧地址放入传回消息队列里\n");
     int param=(int)esb;
     k_msgq_put(&my_msgq_callback,&param,K_NO_WAIT);
-    // int num=k_msgq_num_used_get(&my_msgq_callback);
-    // printk("傳回消息队列里数据组数:%d\n",num);
 
    
   return (esb->size);  //不等待软中断处理结束，返回发送长度；
@@ -137,7 +125,7 @@ int svc_num=svc->svc_type*16+svc->svc_func;
 if ( svc_num <= 0 || svc_num > K5_LAST_SVC  )  return ( -1 );
 if ( esb == NULL  || to == NULL         )  return ( -2 );
 
- memset(esb, 0, K5_ESB_PAGE);  //清零ESB帧结构,整页
+ memset(esb, 0,K5_MAX_BUF);  //清零ESB帧结构,整页
 
  esb->primitive = K5_SEND;              //设置服务原语
  esb->service   = service;              //设置服务编码
@@ -197,7 +185,7 @@ int svc_num=svc->svc_type*16+svc->svc_func;
 if ( svc_num <= 0 || svc_num > K5_LAST_SVC  )  return ( -1 );
 if ( esb == NULL  || to == NULL         )  return ( -2 );
 
- memset(esb, 0, K5_ESB_PAGE);  //清零ESB帧结构,整页
+ memset(esb, 0, K5_MAX_BUF);  //清零ESB帧结构,整页
 
  esb->primitive = K5_CALL;              //设置服务原语
  esb->service   = service;              //设置服务编码

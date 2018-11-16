@@ -131,7 +131,6 @@ typedef struct {
 
 #define  K5_MAX_NET_LEVEL  6   //最大网络级数
 #define  K5_MAX_NET_NAME  64   //最大网络名称字符数
-
 //事件服务总线网络地址描述 net, 2018-09-06
 typedef struct {        
   tU1      net_level;              //网络级数，1为本处理器，直到7，共6级；
@@ -302,7 +301,6 @@ tU4  kk_send  (      //5个参数; 取消nak原语后，恢复异步发送原语
 //--------------------------------------------------------------
 //内核态原语用的小工具，kk_*
 //--------------------------------------------------------------
-void kk_test(void);
 //内核态按八字节长字的内存设置，比按字节的内存设置memset快8倍;
 void kk_mem_set  ( 
      tU8     memory,  //内存起始地址（八字节对齐）
@@ -644,8 +642,6 @@ struct k_msgq my_msgq;
 char __aligned(4) msgq_buf[8*500];
 struct k_msgq my_msgq_callback;
 char __aligned(4) msgq_buf_callback[8*500];
-// struct k_msgq my_msgq_waitback;
-// char __aligned(4) msgq_buf_waitback[8*500];
 /*zephyr此应用情况下写在这里,有用户模式情况下应该都知道通信间线程相互的id*/
 struct k_thread client;
 struct k_thread server;

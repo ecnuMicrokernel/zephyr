@@ -236,15 +236,16 @@ static void search_server_num(tU4  serv_num,tK5_esb *esb){
 			k_thread_create(my_thread,thread_stack,stacksize,entry,param0,param1,param2,prio,options,delay);
 			k_sleep(100);
 
-	        // esb->body[510]=666;
-	        // printk("改变ESB的body[510]数据:%lld\n",esb->body[510]);
+	        esb->body[510]=666;
+	        printk("设置ESB的body[510]返回测试数据:%lld\n",esb->body[510]);
 			
 	 	  	break;
 	 	  }
 	    default: //未知系统服务
 	      {
 			 printk("K_ERR: Unknown service [%x]\n",serv_num );
-			 
+			 esb->body[510]=333;
+	         printk("设置ESB的body[510]返回测试数据:%lld\n",esb->body[510]);
 	         break; 	
 	      }  //结束default
 
@@ -297,55 +298,53 @@ static int esb_server(){
 
                 if(esb.dst_port!=NULL){
                 	search_server_num(serv_num,&esb);//查找服务向量表,调用系统服务
+                	printk("挂起客户端  ");
 					k_thread_suspend(&client);   /*test*/
+					printk("恢复服务器\n");
 					k_thread_resume(&server);    /*test*/
-					esb.body[510]=111;
 					kk_reply(&esb,0,0,NULL);
-					break;
                  }
                 else{
-                	search_server_num(serv_num,&esb);
-                	esb.body[510]=222;
-					kk_reply(&esb,0,0,NULL);
-                	break;
+                	printk("K_ERR: K5_CALL HAS NO DST_PORT\n"); 
                 }
-				
+				break;
 			}//结束K5_CALL原语分支
 	        case K5_WAIT:{
 	        	if(esb.src_port!=NULL){
-	        		kk_test();
+	        		search_server_num(serv_num,&esb);
+	        		printk("挂起服务器等待访问\n");
 	        	    k_thread_suspend(&server);  /*test*/
+	        	   
 	        	}
-	  	        	break;
+	  	        break;
 	        }//结束K5_WAIT原语分支
 	        case K5_SEND:{
 	        	if(esb.dst_port!=NULL){
 	        	    search_server_num(serv_num,&esb);
 	        	    k_thread_resume(esb.dst_port); /*test */
 	        	    kk_reply(&esb,0,0,NULL);
-	  	        	break;
 	  	        }
 	  	        else{
-                	search_server_num(serv_num,&esb);
-                	esb.body[510]=222;
-					kk_reply(&esb,0,0,NULL);
-                	break;
+                	printk("K_ERR: K5_SEND HAS NO DST_PORT\n"); 
                 }
+                break;
 	        }//结束K5_SEND原语分支
 	        case K5_REPLY:{
 	        	if(esb.src_port!=NULL){
 	        	    search_server_num(serv_num,&esb);
 	        	    k_thread_resume(&client); /*test*/
 	        	    kk_reply(&esb,0,0,NULL);
-	  	        	break;
+	  	        }
+	  	        else{
+	  	        	printk("K_ERR: K5_REPLY HAS NO SRC_PORT\n"); 
 	  	        }
 	  	        break;
 	        }//结束K5_REPLY原语分支
-	        default: //未知系统服务
+	        default: 
 	        {
 			    printk("K_ERR: Unknown primitive\n"); 
 	            break; 	
-	        }  //结束default
+	        }  //结束default未知系统服务
 	    }//结束选择服务原语类型
 
 
@@ -362,7 +361,7 @@ static int esb_server(){
  *
  *@return N/A
  */
-
+extern void show_regs();
 void svc_trap(void *parame)
 {
 	
@@ -371,27 +370,16 @@ void svc_trap(void *parame)
   /*若不改变寄存器control[0]的值,异常返回后回到产生异常之前的特权级,
     也可以改写control[0]的值,来改写退出异常处理事件后的权限级别,变成用户级.
   */
-  	int ipsr,control,param;
-     __asm__ volatile(
-      "mov %[param],r12\n\t" \
-      "mrs %[ipsr], ipsr\n\t" \
-      "mrs %[control], control\n\t"
-
-      : [param]"=r"(param),[ipsr] "=r" (ipsr),[control] "=r" (control)
-    );
-   
-    printk("由寄存器取得ESB帧结构的地址\n");
-    printk("----------------------------------------------\n中断处理函数中的工作模式和权限级别相关寄存器值\n");
-    printk("ipsr:%d\ncontrol:%d\n",ipsr,control);
-
-
-    printk("通过消息队列传送ESB帧结构地址到ESB_server线程中\n");
+  	//show_regs();
+    int param;
+    __asm__ volatile(
+      "mov %[param],r12\n\t"\
+      : [param]"=r"(param)
+      );
+    
+    printk("由寄存器取得ESB帧结构的地址,再通过消息队列传送ESB帧结构地址到ESB_server线程中\n");
     k_msgq_put(&my_msgq,&param,K_NO_WAIT);
      
-
-    // int num=k_msgq_num_used_get(&my_msgq);
-    // printk("将ESB帧结构数据传入消息队列 :\n");
-    // printk("传入后消息队列中数据组数:%d\n",num);
         
 	return;	
 }

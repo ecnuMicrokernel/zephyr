@@ -35,8 +35,8 @@ void show_regs(){
 
 void thread_client(){
     k_sleep(SLEEPTIME);
-    printk("Start client thread\n");
-    show_regs();
+    printk("-----------------------------------\nStart client thread\n");
+   // show_regs();
     
     printk("-----------------------------------\n创建线程所需10个参数值如下:\n");
     tU8 buffer[10];
@@ -71,36 +71,42 @@ void thread_client(){
     serv->svc_type=3;
     serv->svc_inout=1; //设置操作拷贝buffer到esb帧结构
     serv->svc_space=0;
-    to.dst_port=1;//应该是server_id,目标线程
-    esb.body[510]=433;
+    to.dst_port=&server;//应该是server_id,目标线程!!左右数据大小不匹配
+    
     printk("serv->svc_type:%d\nserv->svc_func:%d\nserv->svc_inout:%d\n",serv->svc_type,serv->svc_func,serv->svc_inout);
-    printk("esb->body[510]:%lld\n",esb.body[510]);
-
+    printk("dst_port(访问的server线程id):%d\n",to.dst_port);
 
     printk("-----------------------------------\n调用ESB k5_call通信原语\n");
     k5_call(&esb,service,&to,80,buffer);
     //serv->svc_func=0;
-    //tK5_esb     esb1;
-    //k5_call(&esb1,service,&to,0,NULL);
-
-    show_regs();
-    printk("client thread end!\n");
+    //k5_call(&esb,service,&to,0,NULL);
+    
+   // show_regs();
+    printk("client得到传回的数据esb.body[510]:%lld\n",esb.body[510]);
+    printk("client thread end!\n-----------------------------------\n");
 }
 
 void thread_server(){
-    printk("Start server thread\n");
-    show_regs();
+    printk("-----------------------------------\nStart server thread\n");
+   // show_regs();
     printk("-----------------------------------\n设置参数:\n");
     tK5_esb     esb;
     tK5_net     from;
-    from.dst_port=1;//应该是client_id,源线程
-    esb.body[510]=334;
-    printk("esb->body[510]:%lld\n",esb.body[510]);
+    from.src_port=&client;//应该是client_id,源线程
+    printk("src_port(允许访问的client线程id):%d\n",from.src_port);
     printk("-----------------------------------\n调用ESB k5_wait通信原语\n");
     k5_wait(&esb,&from,0,NULL);
-
-    show_regs();
-    printk("server thread end!\n");
+    printk("server得到传回的数据esb.body[510]:%lld\n",esb.body[510]);
+    printk("server得到数据后做相应处理,若是网络通信还要检测帧序号,再设置reply的esb回复数据\n");
+    esb.src_port=1;
+    /*网络通信*/
+    //if clinet 发送来的snd_seq=server 原先希望接受的ack.seq
+      // tU2 ack_err=1;
+    //else ack_err=-1;
+    printk("-----------------------------------\n调用ESB k5_reply通信原语\n");
+    k5_reply(&esb,1,0,NULL);
+   // show_regs();
+    printk("server thread end!\n-----------------------------------\n");
 }
 
 

@@ -196,6 +196,7 @@ config ARCH_HAS_STACK_PROTECTION
 
 config ARCH_HAS_USERSPACE
 	bool
+	#default y
 
 config ARCH_HAS_EXECUTABLE_PAGE_BIT
 	bool

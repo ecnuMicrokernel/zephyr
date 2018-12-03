@@ -36,7 +36,9 @@ void show_regs(){
 void thread_client(){
     k_sleep(SLEEPTIME);
     printk("-----------------------------------\nStart client thread\n");
-   // show_regs();
+    /*------同步通信------*/
+
+    // show_regs();
     
     printk("-----------------------------------\n创建线程所需10个参数值如下:\n");
     tU8 buffer[10];
@@ -81,14 +83,22 @@ void thread_client(){
     //serv->svc_func=0;
     //k5_call(&esb,service,&to,0,NULL);
     
-   // show_regs();
+    // show_regs();
     printk("client得到传回的数据esb.body[510]:%lld\n",esb.body[510]);
+
+    /*------异步通信------*/
+    // tK5_net     from;
+    // from.src_port=&server;
+    // k5_wait(&esb,&from,0,NULL);
+    // 改变esb内数据
+    // k5_reply(&esb,1,0,NULL);
     printk("client thread end!\n-----------------------------------\n");
 }
 
 void thread_server(){
     printk("-----------------------------------\nStart server thread\n");
-   // show_regs();
+    /*------同步通信------*/
+    // show_regs();
     printk("-----------------------------------\n设置参数:\n");
     tK5_esb     esb;
     tK5_net     from;
@@ -105,7 +115,13 @@ void thread_server(){
     //else ack_err=-1;
     printk("-----------------------------------\n调用ESB k5_reply通信原语\n");
     k5_reply(&esb,1,0,NULL);
-   // show_regs();
+    // show_regs();
+
+    /*------异步通信------*/
+    //设置参数
+    //tK5_net     to;
+    //tU4    service;
+    //k5_send(&esb,service,&to,0,NULL);
     printk("server thread end!\n-----------------------------------\n");
 }
 

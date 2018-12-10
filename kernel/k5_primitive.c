@@ -1,7 +1,8 @@
-#include <k5_esb.h>
+//#include <k5_esb.h>
 #include <string.h>
 #include <misc/printk.h>
 #include <kernel.h>
+#include <k5_shared_memory.h>
 //-------------------------------------------------------------------------
 // 同步调用请求服务原语（原SS），一直等待对方应答后，才释放发送缓冲区
 //-------------------------------------------------------------------------
@@ -69,7 +70,7 @@ __asm__ volatile (
 int esb1;
 k_msgq_get(&my_msgq_callback,&esb1,K_FOREVER);
 memcpy(esb,(tK5_esb *)esb1,sizeof(tK5_esb));
-printk("-----------------------------------\n取出传回消息队列里ESB帧结构地址\n");
+printk("-----------------------------------\ncall原语取出传回消息队列里ESB帧结构地址\n");
 
 
 
@@ -102,6 +103,8 @@ if ( esb == NULL  )  return ( -1 );
 memset(esb, 0, K5_MAX_BUF); //清零ESB帧结构,整页
 
 esb->primitive = K5_WAIT;              //设置服务原语
+esb->dst_port  = k_current_get(); //自己添加的
+
 tK5_ehn  ehn; 
 tU1      i, j;   
 if ( from != NULL )                    //为空表示等待任意地址端口
@@ -131,7 +134,7 @@ __asm__ volatile (
 int esb1;
 k_msgq_get(&my_msgq_callback,&esb1,K_FOREVER);
 memcpy(esb,(tK5_esb *)esb1,sizeof(tK5_esb));
-printk("-----------------------------------\n取出传回消息队列里ESB帧结构地址\n");
+printk("-----------------------------------\nwait原语取出传回消息队列里ESB帧结构地址\n");
 
                            
 if (w_len>=esb->size && w_buf!=NULL )       //若指定缓冲区且足够大

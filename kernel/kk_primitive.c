@@ -1,7 +1,7 @@
-#include <k5_esb.h>
+#include <kernel.h>
 #include <string.h>
 #include <misc/printk.h>
-
+#include <k5_shared_memory.h>
 //-------------------------------------------------------------------------
 //同步等待接收原语（原RS)，等待接收服务请求或服务确认;
 //-------------------------------------------------------------------------
@@ -43,8 +43,10 @@ if ( from != NULL )                    //为空表示等待任意地址端口
 // 直接切换到相应的服务线程!!!!!
 //kk_switch_to ( esb, current, next );
 int param;
+//tK5_esb *ac_esb;
 while(k_msgq_get(&my_msgq,&param,K_FOREVER)==0){
   memcpy(esb,(tK5_esb *)param,sizeof(tK5_esb));
+  *w_buf=param;
 	tU4 service=esb->service;
 	tK5_svc  *svc=(tK5_svc *)&service;  
 	printk("传到esb_bus_server中的esb的param:\nservice服务号:%d\n",svc->svc_type*16+svc->svc_func);
@@ -53,7 +55,7 @@ while(k_msgq_get(&my_msgq,&param,K_FOREVER)==0){
   break;
 }
    
-if (w_len>=esb->size && w_buf!=NULL)       //若指定缓冲区且足够大
+if (w_len>esb->size && w_buf!=NULL)       //w_len>=esb->sizez change temportally若指定缓冲区且足够大
 {
 	memcpy(w_buf,esb,esb->size); //则连头拷贝到用户缓冲区
     return (esb->size);                      //给用户返回接收到帧长度
@@ -94,11 +96,12 @@ if (s_len > 0 && s_buf != NULL )  //若有服务结果数据送回
 
 // 直接切换到相应的服务线程!!!!!
 //kk_switch_to ( esb, current, next );
-    printk("将传回的ESB帧地址放入传回消息队列里\n");
-    int param=(int)esb;
-    k_msgq_put(&my_msgq_callback,&param,K_NO_WAIT);
+/*将传回的ESB帧地址放入传回消息队列里*/
+int param=(int)esb;
+//k_msgq_put(&my_msgq_callback,NULL,K_NO_WAIT);
+k_msgq_put(&my_msgq_callback,&param,K_NO_WAIT);
 
-   
+
   return (esb->size);  //不等待软中断处理结束，返回发送长度；
 
 }; // 结束原语kk_reply

@@ -33,8 +33,9 @@
 #include <logging/log_ctrl.h>
 
 /*设置ESB总线所需导入头文件*/
-#include <k5_esb.h>
+//#include <k5_esb.h>
 #include <irq_offload.h>
+#include <k5_shared_memory.h>
 
 /* kernel build timestamp items */
 #define BUILD_TIMESTAMP "BUILD: " __DATE__ " " __TIME__
@@ -215,7 +216,10 @@ void _data_copy(void)
  *
  *@return N/A
  */
-static void search_server_num(tU4  serv_num,tK5_esb *esb){
+static void search_server_num(tK5_esb *esb){
+	tU4 service=esb->service;
+    tK5_svc  *serv = (tK5_svc *)&service;  
+	tU4 serv_num=serv->svc_type*16+ serv->svc_func;
     switch(serv_num)
 	 {
 	 	case thr_start  :
@@ -253,6 +257,101 @@ static void search_server_num(tU4  serv_num,tK5_esb *esb){
 }
 
 /**
+ *@brief check and search the waiting event list
+ * 
+ *This routine check and search the event to confirm whether the event was in the waiting event list according to the source and destination thread id. 
+ *
+ *@
+ * return the esb point if found
+ * return NULL if not found
+ */
+static tK5_esb * check_event_list(tK5_esb *esb){
+	struct k_thread *src_port=(struct k_thread *)esb->src_port;
+	struct k_thread *dst_port=(struct k_thread *)esb->dst_port;
+    switch(esb->primitive){
+    	case K5_WAIT :
+    	case K5_REPLY:
+    	{
+    		if(dst_port->base.list!=NULL){
+               EventNode *wait_event=dst_port->base.list;
+               while(wait_event!=NULL&&wait_event->esb->src_port!=src_port){
+               	wait_event=wait_event->next;
+               }
+               if(wait_event!=NULL){
+               	return wait_event->esb;
+               }
+    		}
+    		break;
+    	}
+    	case K5_CALL:
+    	case K5_SEND:
+    	{
+
+    		if(src_port->base.list!=NULL){
+               EventNode *wait_event=src_port->base.list;
+               while(wait_event!=NULL&&wait_event->esb->dst_port!=dst_port){
+               	wait_event=wait_event->next;
+               }
+               if(wait_event!=NULL){
+               	return wait_event->esb;
+               }
+    		}
+    		break;
+    	}
+    	default:
+    	{
+    		printk("K_ERR: Unknown service");
+    	}
+    }
+
+    return NULL;
+}
+ /**
+ *@brief insert event into event list
+ * 
+ *This routine insert the event into the waiting event list according to the source and destination thread id. 
+ *
+ *@return N/A
+ */
+static void insert_event(tK5_esb *esb,tU4 list_port){
+    struct k_thread *port=(struct k_thread *)list_port;
+    EventNode *event =k_malloc(sizeof(EventNode));
+    event->esb=esb;           
+    event->next=port->base.list; 
+    port->base.list=event; //头插法
+
+	return;
+}
+ /**
+ *@brief delete event from event list
+ * 
+ *This routine delete the event from the waiting event list according to the source and destination thread id. 
+ *
+ *@
+ * return event if delete successfully
+ * return NULL if event is not exit
+ */
+ static EventNode * delete_event(tK5_esb *esb,tU4 list_port){
+    struct k_thread *port=(struct k_thread *)list_port;
+    EventNode *list=port->base.list;
+    EventNode *pre_event=list;
+    while(list->esb!=esb&&list!=NULL){
+       pre_event=list;
+       list=list->next;
+    }
+    if(list!=NULL){
+       if(list->esb->primitive!=K5_CALL){
+           pre_event->next=list->next;
+       }
+       return list;
+    }
+    else{
+    	printk("KK_ERR:This event is not in the EventLinkList\n");
+    	return NULL;
+    }
+ }	
+
+/**
  *@brief ESB server
  * 
  *This routine waits for the esb and switches to the according system server
@@ -264,16 +363,16 @@ static int esb_server(){
     printk("-----------------------------------\n开启 esb_server \n-----------------------------------\n");
    
     tK5_esb esb;
+    tU4 ac_addr;
+    tK5_esb *ac_esb;
     tI4   ret = 0;  
-    tU4  service;
-    tU4  serv_num;
-    tK5_svc  *serv;
+    
     //tK5_ServiceType   *stg;  //服务组表(STG);
     //tK5_ServiceVector *svc;  //服务向量表(SVC);
     
     while(1){
-        ret=kk_wait(&esb,  NULL, 0, NULL);
-
+        ret=kk_wait(&esb,  NULL, 0, &ac_addr);
+        ac_esb=(tK5_esb *)ac_addr;
         if ( ret <= 0 || &esb == NULL ) 
 	      {
 	        printk("KK_ERR: kk_wait [%d]\n", ret);
@@ -284,25 +383,30 @@ static int esb_server(){
           	//kk_switch_to (current, K5_NET_PROXY,esb ); //切到网络代理  
 		    continue;
 	      }; 
-	      service=esb.service;
-	      serv = (tK5_svc *)&service;  
-	      serv_num=serv->svc_type*16+ serv->svc_func;
-	    if ( serv->svc_space != 0 ) {		      //如果服务空间不是内核空间
-            // kk_switch_to ( current, K5_USER_PROXY，esb ); //切到用户代理 
-		    continue;
-	     };
+	      
+	    // if ( serv->svc_space != 0 ) {		      //如果服务空间不是内核空间
+        //         kk_switch_to ( current, K5_USER_PROXY，esb ); //切到用户代理 
+		   //  continue;
+	    //  };
             // stg =(tK5_ServiceType*)&stg_tab[serv->type][0]; //
 	       switch ( esb.primitive )     //服务原语分支转移
 		{
 			case K5_CALL:{
-
                 if(esb.dst_port!=NULL){
-                	search_server_num(serv_num,&esb);//查找服务向量表,调用系统服务
-                	printk("挂起客户端  ");
-					k_thread_suspend(&client);   /*test*/
-					printk("恢复服务器\n");
-					k_thread_resume(&server);    /*test*/
-					kk_reply(&esb,0,0,NULL);
+                	if(check_event_list(&esb)!=NULL){
+                		search_server_num(&esb);//查找服务向量表,调用系统服务
+	                	printk("挂起客户端  ");
+						k_thread_suspend(esb.src_port);  
+						printk("恢复服务器\n");
+						k_thread_resume(esb.dst_port);    
+						kk_reply(&esb,0,0,NULL);
+                	}
+                	else{
+                		printk("加入目标进程的事件队列\n");
+                		insert_event(ac_esb,esb.dst_port);
+                		printk("挂起客户端  ");
+						k_thread_suspend(esb.src_port); 
+                	}
                  }
                 else{
                 	printk("K_ERR: K5_CALL HAS NO DST_PORT\n"); 
@@ -311,16 +415,31 @@ static int esb_server(){
 			}//结束K5_CALL原语分支
 	        case K5_WAIT:{
 	        	if(esb.src_port!=NULL){
-	        		search_server_num(serv_num,&esb);
-	        		printk("挂起服务器等待访问\n");
-	        	    k_thread_suspend(&server);  /*test*/
-	        	   
+	        		if(check_event_list(&esb)!=NULL){
+	        			//search_server_num(&esb);
+	        			ac_esb=delete_event(check_event_list(&esb),esb.dst_port)->esb;
+	        			k_free(delete_event(check_event_list(&esb),esb.dst_port));
+                        memcpy(&esb,ac_esb,sizeof(tK5_esb));
+                        
+                        search_server_num(&esb);
+                        k_msgq_put(&my_msgq_callback,NULL,K_NO_WAIT);//?
+                        kk_reply(&esb,0,0,NULL);
+        
+	        		}
+	        		else{
+		        		search_server_num(&esb);
+		        		printk("加入源进程的事件队列\n");		        		
+		        		insert_event(ac_esb,esb.src_port);//插入源进程的等待队列
+		        		printk("挂起服务器等待访问\n");
+		        	    k_thread_suspend(esb.dst_port); 
+		        
+	        		}
 	        	}
 	  	        break;
 	        }//结束K5_WAIT原语分支
 	        case K5_SEND:{
 	        	if(esb.dst_port!=NULL){
-	        	    search_server_num(serv_num,&esb);
+	        	    search_server_num(&esb);
 	        	    k_thread_resume(esb.dst_port); /*test */
 	        	    kk_reply(&esb,0,0,NULL);
 	  	        }
@@ -331,8 +450,8 @@ static int esb_server(){
 	        }//结束K5_SEND原语分支
 	        case K5_REPLY:{
 	        	if(esb.src_port!=NULL){
-	        	    search_server_num(serv_num,&esb);
-	        	    k_thread_resume(&client); /*test*/
+	        	    search_server_num(&esb);
+	        	    k_thread_resume(esb.src_port); /*test*/
 	        	    kk_reply(&esb,0,0,NULL);
 	  	        }
 	  	        else{
@@ -350,6 +469,7 @@ static int esb_server(){
 
         memset(&esb,0,K5_ESB_PAGE );
         k_sleep(100);
+
     }  
 }
 
@@ -363,10 +483,8 @@ static int esb_server(){
  */
 extern void show_regs();
 void svc_trap(void *parame)
-{
-	
-  printk("陷入内核开始执行svc陷入后的中断例程\n");
-  
+{	
+  printk("陷入内核执行svc陷入指令的中断例程,将esb帧通过下消息队列传到ESB_server线程中\n");
   /*若不改变寄存器control[0]的值,异常返回后回到产生异常之前的特权级,
     也可以改写control[0]的值,来改写退出异常处理事件后的权限级别,变成用户级.
   */
@@ -375,15 +493,10 @@ void svc_trap(void *parame)
     __asm__ volatile(
       "mov %[param],r12\n\t"\
       : [param]"=r"(param)
-      );
-    
-    printk("由寄存器取得ESB帧结构的地址,再通过消息队列传送ESB帧结构地址到ESB_server线程中\n");
-    k_msgq_put(&my_msgq,&param,K_NO_WAIT);
-     
-        
+      );  
+    k_msgq_put(&my_msgq,&param,K_NO_WAIT);      
 	return;	
 }
-
 
 
 
@@ -447,8 +560,8 @@ static void bg_thread_main(void *unused1, void *unused2, void *unused3)
 	_ready_thread(_esb_thread);  
 
     /*ESB:初始化esb_server线程与主线程的通信消息队列*/  
-	k_msgq_init(&my_msgq,msgq_buf,4,512);
-	k_msgq_init(&my_msgq_callback,msgq_buf_callback,4,512);
+	k_msgq_init(&my_msgq,msgq_buf,4,500);
+	k_msgq_init(&my_msgq_callback,msgq_buf_callback,4,500);
     
      /*ESB:设置中断处理函数*/
     offload_routine = svc_trap;

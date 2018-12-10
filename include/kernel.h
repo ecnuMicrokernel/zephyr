@@ -16,7 +16,7 @@
 #if !defined(_ASMLANGUAGE)
 #include <kernel_includes.h>
 #include <errno.h>
-
+#include <k5_esb.h>   /*添加ESB头文件*/
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -423,6 +423,8 @@ struct _thread_base {
 	/* thread state */
 	u8_t thread_state;
 
+   /*ESB添加的等待事件列表*/
+    EventLinkList *list;
 	/*
 	 * scheduler lock count and thread priority
 	 *
@@ -510,7 +512,7 @@ struct _mem_domain_info {
  * @ingroup thread_apis
  * Thread Structure
  */
-struct k_thread {
+struct k_thread {   
 
 	struct _thread_base base;
 

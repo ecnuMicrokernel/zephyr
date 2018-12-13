@@ -424,7 +424,11 @@ struct _thread_base {
 	u8_t thread_state;
 
    /*ESB添加的等待事件列表*/
-    EventLinkList *list;
+    EventLinkList suspended_list;
+    /*ESB添加的等待发送事件列表*/
+    EventLinkList wait_send_list;
+     /*ESB添加的等待接收的事件列表*/
+    EventLinkList wait_receive_list;
 	/*
 	 * scheduler lock count and thread priority
 	 *

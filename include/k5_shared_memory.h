@@ -4,9 +4,9 @@
 #include <toolchain.h>
 #include <kernel.h>
 struct k_msgq my_msgq;
-char __aligned(4) msgq_buf[8*500];
+char __aligned(4) msgq_buf[4*500];
 struct k_msgq my_msgq_callback;
-char __aligned(4) msgq_buf_callback[8*500];
+char __aligned(4) msgq_buf_callback[4*500];
 
 struct k_thread client;
 struct k_thread server;

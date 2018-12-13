@@ -67,11 +67,16 @@ __asm__ volatile (
                   :
                   : [id] "i" (1),[esb]"X"(esb)
                   : "memory");
+
 int esb1;
+printk("挂起自身客户端等待响应 \n");
+k_thread_suspend(esb->src_port); 
 k_msgq_get(&my_msgq_callback,&esb1,K_FOREVER);
 memcpy(esb,(tK5_esb *)esb1,sizeof(tK5_esb));
+// printk("%d\n%d\n",&esb2,esb1);
+// printk("%lld\n",esb2.body[510]);
 printk("-----------------------------------\ncall原语取出传回消息队列里ESB帧结构地址\n");
-
+//插入进程的等待接受队列
 
 
      
@@ -132,6 +137,8 @@ __asm__ volatile (
                   : "memory");
 
 int esb1;
+printk("挂起自身服务器端等待响应 \n");
+k_thread_suspend(esb->dst_port); 
 k_msgq_get(&my_msgq_callback,&esb1,K_FOREVER);
 memcpy(esb,(tK5_esb *)esb1,sizeof(tK5_esb));
 printk("-----------------------------------\nwait原语取出传回消息队列里ESB帧结构地址\n");

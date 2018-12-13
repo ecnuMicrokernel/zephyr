@@ -96,9 +96,10 @@ if (s_len > 0 && s_buf != NULL )  //若有服务结果数据送回
 
 // 直接切换到相应的服务线程!!!!!
 //kk_switch_to ( esb, current, next );
+
 /*将传回的ESB帧地址放入传回消息队列里*/
 int param=(int)esb;
-//k_msgq_put(&my_msgq_callback,NULL,K_NO_WAIT);
+
 k_msgq_put(&my_msgq_callback,&param,K_NO_WAIT);
 
 

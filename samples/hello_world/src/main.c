@@ -173,15 +173,13 @@ void thread_server1(){
 void thread_client2(){
     printk("-----------------------------------\nStart client thread\n");
     tK5_net     from;
-    from.src_port=&client;
+    from.src_port=&server;
     printk("-----------------------------------\n调用ESB k5_wait通信原语\n");
     k5_wait(&esb1,&from,0,NULL);
     //  改变esb内数据
     esb1.body[0]=123;
     printk("-----------------------------------\n调用ESB k5_reply通信原语\n");
-    //esb1.src_port=NULL;
     k5_reply(&esb1,1,0,NULL);
-    //printk("%d\n",client.base.list);
     printk("client thread end!\n-----------------------------------\n");
 }
     
@@ -191,6 +189,7 @@ void thread_server2(){
     /*设置参数*/
     tK5_net     to;
     to.dst_port=&client;
+    to.src_port=&server;
     tU4    service;
     tK5_svc * serv = (tK5_svc *)&service;  
     serv->svc_func=0;
@@ -200,14 +199,41 @@ void thread_server2(){
     printk("server thread end!\n-----------------------------------\n");
 }
     
-/*------------------异步原语通信测试:server先send,lient再wait,client接到消息后再reply------------------*/
-
+/*------------------异步原语通信测试:server先send,client再wait,client接到消息后再reply------------------*/
+void thread_client3(){
+    k_sleep(SLEEPTIME);
+    printk("-----------------------------------\nStart client thread\n");
+    tK5_net     from;
+    from.src_port=&server;
+    printk("-----------------------------------\n调用ESB k5_wait通信原语\n");
+    k5_wait(&esb1,&from,0,NULL);
+    //  改变esb内数据
+    esb1.body[0]=123;
+    printk("-----------------------------------\n调用ESB k5_reply通信原语\n");
+    k5_reply(&esb1,1,0,NULL);
+    printk("client thread end!\n-----------------------------------\n");
+}
+    
+void thread_server3(){  
+    printk("-----------------------------------\nStart server thread\n");
+    /*设置参数*/
+    tK5_net     to;
+    to.dst_port=&client;
+    to.src_port=&server;
+    tU4    service;
+    tK5_svc * serv = (tK5_svc *)&service;  
+    serv->svc_func=0;
+    serv->svc_type=3;
+    printk("-----------------------------------\n调用ESB k5_send通信原语\n");
+    k5_send(&esb2,service,&to,0,NULL);
+    printk("server thread end!\n-----------------------------------\n");
+}
 
 /*--------------------------------------------主测试函数-------------------------------------------*/
 void main(void){
    printk("-----------------------------------\nARCH: %s\n", CONFIG_ARCH);
-   k_thread_create(&server,server_stack,STACKSIZE,thread_server2,0,0,0,1,0,K_NO_WAIT);
-   k_thread_create(&client,client_stack,STACKSIZE,thread_client2,0,0,0,1,0,K_NO_WAIT);
+   k_thread_create(&server,server_stack,STACKSIZE,thread_server3,0,0,0,1,0,K_NO_WAIT);
+   k_thread_create(&client,client_stack,STACKSIZE,thread_client3,0,0,0,1,0,K_NO_WAIT);
    
 }
 

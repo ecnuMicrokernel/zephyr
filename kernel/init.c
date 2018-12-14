@@ -277,14 +277,12 @@ static tK5_esb * search_list(tK5_esb *esb,int list_type){
     	{   
     		if(list_type==0){ list=src_port->base.suspended_list;}
 			if(list_type==1){ list=src_port->base.wait_send_list;}
-			if(list_type==2){ list=src_port->base.wait_receive_list;}
-
+			if(list_type==2){ list=dst_port->base.wait_receive_list;}
     		if(list!=NULL){
                event=list;
-               while(event!=NULL&&event->esb->dst_port!=dst_port){
-               	event=event->next;
-               }
-         
+	           while(event!=NULL&&event->esb->dst_port!=dst_port){
+	               	event=event->next;
+	             }
                if(event!=NULL){
                	return event->esb;
                }
@@ -451,32 +449,28 @@ static int esb_server(){
 	        		if(search_list(&esb,2)!=NULL){ //等待接受队列
 	        			ac_esb=search_list(&esb,2);
 	        			memcpy(&esb,ac_esb,sizeof(tK5_esb));
+	        			printk("移出目标进程的等待接受队列中的结果事件并返回\n");
 	        			delete_event(search_list(&esb,2),esb.dst_port,2);
+	        			k_thread_resume(esb.dst_port); 
                         kk_reply(&esb,0,0,NULL);
-	        		}
-	        		if(search_list(&esb,0)!=NULL){
-	        			//search_server_num(&esb);
-	        			printk("读出客户端挂起队列中的事件内容并调用服务后返回\n");
-                        memcpy(&esb,search_list(&esb,0),sizeof(tK5_esb));
-                        search_server_num(&esb);
-                        printk("恢复服务器端进程来接受响应\n");
-                        k_thread_resume(esb.dst_port);  
-                        kk_reply(&esb,0,0,NULL);
-        
 	        		}
 	        		else{
-		        		search_server_num(&esb);	        
-		        		printk("将事件插入服务器端进程自身的挂起事件队列\n");	
-		        		// printk("%d\n",server.base.suspended_list);
-		        		// insert_event(ac_esb,esb.dst_port,0);
-		        		// insert_event(ac_esb,esb.dst_port,0);
-		        		insert_event(ac_esb,esb.dst_port,0);
-		        		// printk("%d\n",server.base.suspended_list);
-		        		// printk("%d\n",server.base.suspended_list->next);
-		        		// printk("%d\n",server.base.suspended_list->next->next);
-		        	    
-		            
-	        		}
+	        			if(search_list(&esb,0)!=NULL){
+		        			//search_server_num(&esb);
+		        			printk("读出客户端挂起队列中的事件内容并调用服务后返回\n");
+	                        memcpy(&esb,search_list(&esb,0),sizeof(tK5_esb));
+	                        search_server_num(&esb);
+	                        printk("恢复服务器端进程来接受响应\n");
+	                        k_thread_resume(esb.dst_port);  
+	                        kk_reply(&esb,0,0,NULL);
+	        
+		        		}
+		        		else{
+			        		search_server_num(&esb);	        
+			        		printk("将事件插入服务器端进程自身的挂起事件队列\n");	
+			        		insert_event(ac_esb,esb.dst_port,0);	            
+		        		}
+	        		}		
 	        	}
 	  	        break;
 	        }//结束K5_WAIT原语分支
@@ -491,7 +485,8 @@ static int esb_server(){
 	        	    else{
 	        	    	search_server_num(&esb);
 	        	    	memcpy(ac_esb,&esb,sizeof(tK5_esb));
-	        	    	insert_event(ac_esb,esb.src_port,2);
+	        	    	printk("调用服务后将结果事件插入目标进程的等待接受队列\n");
+	        	    	insert_event(ac_esb,esb.dst_port,2);
 	        	    } 
 	        	    
 	  	        }
@@ -515,7 +510,9 @@ static int esb_server(){
 	        		else{
 	        			search_server_num(&esb);
 	        			memcpy(ac_esb,&esb,sizeof(tK5_esb));
+	        			printk("调用服务并将返回结果事件插入源目的进程的等待接受队列\n");
 	        	    	insert_event(ac_esb,esb.src_port,2);
+
 	        		}
 	        	    
 	  	        }
@@ -531,8 +528,6 @@ static int esb_server(){
 	        }  //结束default未知系统服务
 	    }//结束选择服务原语类型
 
-
-        //memset(&esb,0,K5_ESB_PAGE );
         k_sleep(100);
 
     }  

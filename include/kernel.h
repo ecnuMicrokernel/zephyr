@@ -16,7 +16,8 @@
 #if !defined(_ASMLANGUAGE)
 #include <kernel_includes.h>
 #include <errno.h>
-#include <k5_esb.h>   /*添加ESB头文件*/
+#include <k5_esb.h>  
+#include <k5_event_list.h> /*添加头文件*/
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -423,11 +424,10 @@ struct _thread_base {
 	/* thread state */
 	u8_t thread_state;
 
-   /*ESB添加的等待事件列表*/
-    EventLinkList suspended_list;
-    /*ESB添加的等待发送事件列表*/
+  
+    /*ESB添加的等待发送事件队列*/
     EventLinkList wait_send_list;
-     /*ESB添加的等待接收的事件列表*/
+     /*ESB添加的等待接收事件队列*/
     EventLinkList wait_receive_list;
 	/*
 	 * scheduler lock count and thread priority

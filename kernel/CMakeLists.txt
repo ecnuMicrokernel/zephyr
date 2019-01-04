@@ -1,30 +1,32 @@
 # kernel is a normal CMake library and not a zephyr_library because it
 # should not be --whole-archive'd
 add_library(kernel
-  alert.c
+  #alert.c
   device.c
   errno.c
   idle.c
   init.c
-  mailbox.c
-  mem_slab.c
+  #mailbox.c
+  #mem_slab.c
   mempool.c
   msg_q.c
-  mutex.c
-  pipes.c
-  queue.c
+  #mutex.c
+  #pipes.c
+  #queue.c
   sched.c
-  sem.c
-  stack.c
+  #sem.c
+  #stack.c
   sys_clock.c
-  system_work_q.c
+  #system_work_q.c
   thread.c
-  thread_abort.c
-  version.c
-  work_q.c
-  smp.c
+  #thread_abort.c
+  #version.c
+  #work_q.c
+  #smp.c
   kk_primitive.c
   k5_primitive.c
+  k5_event_list.c
+  k5_service.c
   )
 
 # Kernel files has the macro __ZEPHYR_SUPERVISOR__ set so that it

@@ -232,8 +232,8 @@ void thread_server3(){
 /*--------------------------------------------主测试函数-------------------------------------------*/
 void main(void){
    printk("-----------------------------------\nARCH: %s\n", CONFIG_ARCH);
-   k_thread_create(&server,server_stack,STACKSIZE,thread_server3,0,0,0,1,0,K_NO_WAIT);
-   k_thread_create(&client,client_stack,STACKSIZE,thread_client3,0,0,0,1,0,K_NO_WAIT);
+   k_thread_create(&server,server_stack,STACKSIZE,thread_server,0,0,0,1,0,K_NO_WAIT);
+   k_thread_create(&client,client_stack,STACKSIZE,thread_client,0,0,0,1,0,K_NO_WAIT);
    
 }
 

@@ -20,6 +20,7 @@
 #include <syscall_handler.h>
 #include <logging/log.h>
 
+
 typedef int (*out_func_t)(int c, void *ctx);
 
 enum pad_type {
@@ -265,6 +266,8 @@ static int char_out(int c, void *ctx_p)
 	return _char_out(c);
 }
 
+
+
 #ifdef CONFIG_USERSPACE
 int vprintk(const char *fmt, va_list ap)
 {
@@ -279,6 +282,7 @@ int vprintk(const char *fmt, va_list ap)
 		return ctx.count;
 	} else {
 		struct out_context ctx = { 0 };
+        //_char_out("1");
 
 		_vprintk(char_out, &ctx, fmt, ap);
 
@@ -289,7 +293,6 @@ int vprintk(const char *fmt, va_list ap)
 int vprintk(const char *fmt, va_list ap)
 {
 	struct out_context ctx = { 0 };
-
 	_vprintk(char_out, &ctx, fmt, ap);
 
 	return ctx.count;
@@ -337,7 +340,6 @@ int printk(const char *fmt, ...)
 {
 	int ret;
 	va_list ap;
-
 	va_start(ap, fmt);
 
 	if (IS_ENABLED(CONFIG_LOG_PRINTK)) {
@@ -348,6 +350,188 @@ int printk(const char *fmt, ...)
 	va_end(ap);
 
 	return ret;
+}
+
+
+/*控制台输出事件*/
+tK5_esb   esb_print;
+/**
+ * 功能: 通过ESB机制来实现控制台的格式化输出,直接调用内核态下的最底层输出函数char_out()中的_char_out()
+ * 输入参数:
+ *    *ctx:输出上下文
+ *    *fmt:所需输出的字符串内容首地址
+ *      ap:可变参数
+ * 输出参数:
+ *     无
+ *
+ */
+void _vprintk_esb(void *ctx, const char *fmt, va_list ap)
+{
+	int might_format = 0; 
+	enum pad_type padding = PAD_NONE;
+	int min_width = -1;
+	int long_ctr = 0;
+
+	while (*fmt) {
+		if (!might_format) {
+			if (*fmt != '%') {
+				char_out((int)*fmt, ctx);
+			} else {
+				might_format = 1;
+				min_width = -1;
+				padding = PAD_NONE;
+				long_ctr = 0;
+			}
+		} else {
+			switch (*fmt) {
+			case '-':
+				padding = PAD_SPACE_AFTER;
+				goto still_might_format;
+			case '0':
+				if (min_width < 0 && padding == PAD_NONE) {
+					padding = PAD_ZERO_BEFORE;
+					goto still_might_format;
+				}
+				/* Fall through */
+			case '1' ... '9':
+				if (min_width < 0) {
+					min_width = *fmt - '0';
+				} else {
+					min_width = 10 * min_width + *fmt - '0';
+				}
+
+				if (padding == PAD_NONE) {
+					padding = PAD_SPACE_BEFORE;
+				}
+				goto still_might_format;
+			case 'l':
+				long_ctr++;
+				/* Fall through */
+			case 'z':
+			case 'h':
+				/* FIXME: do nothing for these modifiers */
+				goto still_might_format;
+			case 'd':
+			case 'i': {
+				long d;
+				if (long_ctr < 2) {
+					d = va_arg(ap, long);
+				} else {
+					d = (long)va_arg(ap, long long);
+				}
+
+				if (d < 0) {
+					char_out((int)'-', ctx);
+					d = -d;
+					min_width--;
+				}
+				_printk_dec_ulong(char_out, ctx, d, padding,
+						  min_width);
+				break;
+			}
+			case 'u': {
+				unsigned long u;
+
+				if (long_ctr < 2) {
+					u = va_arg(ap, unsigned long);
+				} else {
+					u = (unsigned long)va_arg(ap,
+							unsigned long long);
+				}
+				_printk_dec_ulong(char_out, ctx, u, padding,
+						  min_width);
+				break;
+			}
+			case 'p':
+				  char_out('0', ctx);
+				  char_out('x', ctx);
+				  /* left-pad pointers with zeros */
+				  padding = PAD_ZERO_BEFORE;
+				  min_width = 8;
+				  /* Fall through */
+			case 'x':
+			case 'X': {
+				unsigned long x;
+
+				if (long_ctr < 2) {
+					x = va_arg(ap, unsigned long);
+				} else {
+					x = (unsigned long)va_arg(ap,
+							unsigned long long);
+				}
+
+				_printk_hex_ulong(char_out, ctx, x, padding,
+						  min_width);
+				break;
+			}
+			case 's': {
+				char *s = va_arg(ap, char *);
+				char *start = s;
+
+				while (*s)
+					char_out((int)(*s++), ctx);
+
+				if (padding == PAD_SPACE_AFTER) {
+					int remaining = min_width - (s - start);
+					while (remaining-- > 0) {
+						char_out(' ', ctx);
+					}
+				}
+				break;
+			}
+			case 'c': {
+				int c = va_arg(ap, int);
+
+				char_out(c, ctx);
+				break;
+			}
+			case '%': {
+				char_out((int)'%', ctx);
+				break;
+			}
+			default:
+				char_out((int)'%', ctx);
+				char_out((int)*fmt, ctx);
+				break;
+			}
+			might_format = 0;
+		}
+still_might_format:
+		++fmt;
+	}
+}
+/**
+ * 功能: 通过ESB机制来实现控制台的输出
+ * 输入参数:
+ *    *fmt:所需输出的字符串内容首地址
+ * 输出参数:
+ *     ret:所输出的上下文的长度
+ *
+ */
+int printk_esb(const char *fmt, ...){
+    int ret;
+    va_list app;
+	va_start(app, fmt);
+	struct out_context ctx = { 0 };
+
+    tU4    service;
+    tK5_svc * serv = (tK5_svc *)&service;      
+    tK5_net     to;
+    tU8 buffer[4];
+    serv->svc_func = 13;
+    serv->svc_type = 11;
+    serv->svc_inout=1;
+    buffer[0] = (tU8)&ctx;
+    buffer[1] = (tU8)fmt;
+    buffer[2] = (tU8)&app;
+    to.dst_port = console;
+    to.src_port = k_current_get(); 
+    k5_call(&esb_print ,service ,&to ,24 ,buffer);
+    
+	ret = ctx.count;
+	va_end(app);
+	return ret;
+
 }
 
 /**

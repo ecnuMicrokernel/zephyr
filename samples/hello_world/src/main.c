@@ -4,12 +4,18 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 #include <misc/printk.h>
-//#include <k5_esb.h>
-#include <kernel.h>
-#include <k5_shared_memory.h>
+#include <zephyr.h>
+//#include <k5_shared_memory.h>
 
 #define STACKSIZE 6000
 #define SLEEPTIME 50
+/*用户线程pcb*/
+struct k_thread client;
+struct k_thread server;
+
+/*用户事件内容*/
+tK5_esb esb1;
+tK5_esb esb2;
 
 
 char client_stack[STACKSIZE];
@@ -105,6 +111,7 @@ void thread_server(){
     k5_reply(&esb2,1,0,NULL);
     // show_regs();
     printk("server thread end!\n-----------------------------------\n");
+    //printk("%d\n",sizeof(va_list ));
 }
 
 
@@ -231,9 +238,10 @@ void thread_server3(){
 
 /*--------------------------------------------主测试函数-------------------------------------------*/
 void main(void){
-   printk("-----------------------------------\nARCH: %s\n", CONFIG_ARCH);
-   k_thread_create(&server,server_stack,STACKSIZE,thread_server,0,0,0,1,0,K_NO_WAIT);
-   k_thread_create(&client,client_stack,STACKSIZE,thread_client,0,0,0,1,0,K_NO_WAIT);
-   
+   //printk_esb("-----------------------------------\nARCH: %s\n", CONFIG_ARCH);
+   // k_thread_create(&server,server_stack,STACKSIZE,thread_server,0,0,0,1,0,K_NO_WAIT);
+   // k_thread_create(&client,client_stack,STACKSIZE,thread_client,0,0,0,1,0,K_NO_WAIT);
+   printk_esb("Hello %s!!\n%d\n","world",2019);
+   // printk("printk_esb函数结束\n");
 }
 

@@ -12,7 +12,6 @@
 #include <stddef.h>
 #include <stdarg.h>
 #include <inttypes.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -42,13 +41,14 @@ extern "C" {
  * @return N/A
  */
 #ifdef CONFIG_PRINTK
+int printk_esb(const char *fmt, ...);
+void _vprintk_esb(void *ctx, const char *fmt, va_list ap);
 extern __printf_like(1, 2) int printk(const char *fmt, ...);
 extern __printf_like(1, 0) int vprintk(const char *fmt, va_list ap);
 extern __printf_like(3, 4) int snprintk(char *str, size_t size,
 					const char *fmt, ...);
 extern __printf_like(3, 0) int vsnprintk(char *str, size_t size,
 					  const char *fmt, va_list ap);
-
 extern __printf_like(3, 0) void _vprintk(int (*out)(int, void *), void *ctx,
 					 const char *fmt, va_list ap);
 #else

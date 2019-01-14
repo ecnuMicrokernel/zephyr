@@ -16,7 +16,7 @@
 #if !defined(_ASMLANGUAGE)
 #include <kernel_includes.h>
 #include <errno.h>
-#include <k5_esb.h>  
+#include <k5_esb.h>
 #include <k5_event_list.h> /*添加头文件*/
 #ifdef __cplusplus
 extern "C" {
